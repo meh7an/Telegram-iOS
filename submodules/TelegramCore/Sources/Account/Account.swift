@@ -1232,6 +1232,7 @@ public class Account {
     public let testingEnvironment: Bool
     public let supplementary: Bool
     public let isSupportUser: Bool
+    public let supportContext: SupportContext?
     public let postbox: Postbox
     public let network: Network
     public let networkArguments: NetworkInitializationArguments
@@ -1329,6 +1330,7 @@ public class Account {
         self.auxiliaryMethods = auxiliaryMethods
         self.supplementary = supplementary
         self.isSupportUser = isSupportUser
+        self.supportContext = isSupportUser ? SupportContext() : nil
         
         self.networkStatsContext = NetworkStatsContext(postbox: postbox)
         
@@ -1479,7 +1481,7 @@ public class Account {
             
             if value {
                 Logger.shared.log("Account", "Became master")
-                let data = managedServiceViews(accountPeerId: peerId, network: network, postbox: postbox, stateManager: strongSelf.stateManager, pendingMessageManager: strongSelf.pendingMessageManager)
+                let data = managedServiceViews(accountPeerId: peerId, network: network, postbox: postbox, stateManager: strongSelf.stateManager, pendingMessageManager: strongSelf.pendingMessageManager, supportContext: strongSelf.supportContext)
                 
                 let resetPeerHoles = data.resetPeerHoles
                 strongSelf.resetPeerHoleManagement = { peerId in

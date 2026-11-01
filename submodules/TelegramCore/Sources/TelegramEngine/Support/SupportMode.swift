@@ -17,3 +17,15 @@ func resolvedIsSupportUser(storedPhone: String?, recordAttribute: Bool) -> Bool 
 public func supportModeWasLost(phone: String?, isSupportUser: Bool) -> Bool {
     return !isSupportUser && isSupportAccountPhone(phone)
 }
+
+public func supportChatListHoleIsHeld(holeTimestamp: Int32, loadTill: Int32) -> Bool {
+    return holeTimestamp <= loadTill
+}
+
+func supportChatListInitialLoadTill(now: Int32, period: Int32) -> Int32 {
+    return max(now - period, 0)
+}
+
+func supportChatListLoadTillAfterLoadMore(current: Int32, holeTimestamp: Int32, period: Int32) -> Int32 {
+    return max(min(current, holeTimestamp - period), 0)
+}

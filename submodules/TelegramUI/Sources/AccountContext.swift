@@ -322,7 +322,7 @@ public final class AccountContextImpl: AccountContext {
         self.sharedContextImpl = sharedContext
         self.account = account
         self.engine = TelegramEngine(account: account)
-        self.supportContext = account.isSupportUser ? SupportContext() : nil
+        self.supportContext = account.supportContext
         
         self.imageCache = DirectMediaImageCache(account: account)
         

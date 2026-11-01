@@ -8,6 +8,7 @@ import AccountContext
 enum ChatListNodeEntryId: Hashable {
     case Header
     case Hole(Int64)
+    case LoadMore
     case PeerId(Int64)
     case ThreadId(Int64)
     case GroupId(EngineChatList.Group)
@@ -419,6 +420,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
     case HeaderEntry
     case PeerEntry(PeerEntryData)
     case HoleEntry(EngineMessage.Index, theme: PresentationTheme)
+    case LoadMoreEntry(EngineMessage.Index, isLoading: Bool, showsFolderLimit: Bool, theme: PresentationTheme)
     case GroupReferenceEntry(GroupReferenceEntryData)
     case ContactEntry(ContactEntryData)
     case ArchiveIntro(presentationData: ChatListPresentationData)
@@ -434,6 +436,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
         case let .PeerEntry(peerEntry):
             return .index(peerEntry.index)
         case let .HoleEntry(holeIndex, _):
+            return .index(.chatList(EngineChatList.Item.Index.ChatList(pinningIndex: nil, messageIndex: holeIndex)))
+        case let .LoadMoreEntry(holeIndex, _, _, _):
             return .index(.chatList(EngineChatList.Item.Index.ChatList(pinningIndex: nil, messageIndex: holeIndex)))
         case let .GroupReferenceEntry(groupReferenceEntry):
             return .index(groupReferenceEntry.index)
@@ -465,6 +469,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             }
         case let .HoleEntry(holeIndex, _):
             return .Hole(Int64(holeIndex.id.id))
+        case .LoadMoreEntry:
+            return .LoadMore
         case let .GroupReferenceEntry(groupReferenceEntry):
             return .GroupId(groupReferenceEntry.groupId)
         case let .ContactEntry(contactEntry):
@@ -506,6 +512,12 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                         return lhsHole == rhsHole && lhsTheme === rhsTheme
                     default:
                         return false
+                }
+            case let .LoadMoreEntry(lhsHole, lhsIsLoading, lhsShowsFolderLimit, lhsTheme):
+                if case let .LoadMoreEntry(rhsHole, rhsIsLoading, rhsShowsFolderLimit, rhsTheme) = rhs {
+                    return lhsHole == rhsHole && lhsIsLoading == rhsIsLoading && lhsShowsFolderLimit == rhsShowsFolderLimit && lhsTheme === rhsTheme
+                } else {
+                    return false
                 }
             case let .GroupReferenceEntry(groupReferenceEntry):
                 if case .GroupReferenceEntry(groupReferenceEntry) = rhs {
@@ -604,7 +616,7 @@ struct ChatListContactPeer {
     }
 }
 
-func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation, contacts: [ChatListContactPeer], accountPeerId: EnginePeer.Id, isMainTab: Bool) -> (entries: [ChatListNodeEntry], loading: Bool) {
+func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation, contacts: [ChatListContactPeer], accountPeerId: EnginePeer.Id, isMainTab: Bool, isFolder: Bool) -> (entries: [ChatListNodeEntry], loading: Bool) {
     var groupItems = view.groupItems
     if isMainTab && state.archiveStoryState != nil && groupItems.isEmpty {
         groupItems.append(EngineChatList.GroupItem(
@@ -667,7 +679,21 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
     
     var hasPinned = false
     
+    var isHoleHeld = false
+    if let holeIndex = view.holeIndex, let loadTill = state.supportChatListLoadTill {
+        isHoleHeld = supportChatListHoleIsHeld(holeTimestamp: holeIndex.timestamp, loadTill: loadTill)
+    }
+    var pendingLoadMoreEntry: ChatListNodeEntry?
+    if case .chatList = mode, let holeIndex = view.holeIndex, isHoleHeld || !view.isLoading {
+        pendingLoadMoreEntry = .LoadMoreEntry(holeIndex, isLoading: !isHoleHeld, showsFolderLimit: isFolder, theme: state.presentationData.theme)
+    }
+    
     loop: for entry in view.items {
+        if let loadMoreEntry = pendingLoadMoreEntry, loadMoreEntry.sortIndex < .index(entry.index) {
+            result.append(loadMoreEntry)
+            pendingLoadMoreEntry = nil
+        }
+        
         var peerId: EnginePeer.Id?
         var threadId: Int64?
         var activityItemId: ChatListNodePeerInputActivities.ItemId?
@@ -770,6 +796,10 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
         } else {
             result.append(entry)
         }
+    }
+    
+    if let loadMoreEntry = pendingLoadMoreEntry {
+        result.append(loadMoreEntry)
     }
     
     if let hiddenGeneralThread {
@@ -993,5 +1023,5 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
     } else if result.count == 1, case .HoleEntry = result[0] {
         return ([.HeaderEntry], true)
     }
-    return (result, view.isLoading)
+    return (result, view.isLoading && !isHoleHeld)
 }
