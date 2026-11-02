@@ -161,6 +161,16 @@ public final class Transaction {
         self.postbox?.clearHistory(peerId, threadId: threadId, minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, namespaces: namespaces, forEachMedia: forEachMedia)
     }
     
+    public func removeHistoryAsUnseenPeer(_ peerId: PeerId, namespace: MessageId.Namespace) {
+        assert(!self.disposed)
+        self.postbox?.removeHistoryAsUnseenPeer(peerId, namespace: namespace)
+    }
+    
+    public func hasOpenMessageHistoryView(peerId: PeerId) -> Bool {
+        assert(!self.disposed)
+        return self.postbox?.hasOpenMessageHistoryView(peerId: peerId) ?? false
+    }
+    
     public func removeAllMessagesWithAuthor(_ peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace, forEachMedia: ((Media) -> Void)?) {
         assert(!self.disposed)
         self.postbox?.removeAllMessagesWithAuthor(peerId, authorId: authorId, namespace: namespace, forEachMedia: forEachMedia)
@@ -1190,6 +1200,21 @@ public final class Transaction {
             return []
         }
         return postbox.chatListTable.getNamespaceEntries(groupId: groupId, namespace: namespace, summaryTag: summaryTag, messageIndexTable: postbox.messageHistoryIndexTable, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, readStateTable: postbox.readStateTable, summaryTable: postbox.messageHistoryTagsSummaryTable)
+    }
+    
+    public func chatListStoredEntries(groupId: PeerGroupId, earlierThan index: (index: ChatListIndex, isChat: Bool)?, count: Int) -> [ChatListStoredEntry] {
+        assert(!self.disposed)
+        guard let postbox = self.postbox else {
+            return []
+        }
+        return postbox.chatListTable.earlierEntryInfos(groupId: groupId, index: index.flatMap { ($0.index, $0.isChat) }, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: count).map { entry -> ChatListStoredEntry in
+            switch entry {
+            case let .message(index, _):
+                return .chat(index)
+            case let .hole(hole):
+                return .hole(hole)
+            }
+        }
     }
     
     public func getTopChatListEntries(groupId: PeerGroupId, count: Int) -> [RenderedPeer] {
@@ -2334,6 +2359,16 @@ final class PostboxImpl {
                 self.messageHistoryHoleIndexTable.remove(peerId: peerId, namespace: namespace, space: .everywhere, range: 1 ... Int32.max - 1, operations: &self.currentPeerHoleOperations)
             }
         }
+    }
+    
+    fileprivate func hasOpenMessageHistoryView(peerId: PeerId) -> Bool {
+        return self.viewTracker.hasMessageHistoryView(peerId: peerId)
+    }
+    
+    fileprivate func removeHistoryAsUnseenPeer(_ peerId: PeerId, namespace: MessageId.Namespace) {
+        self.clearHistory(peerId, threadId: nil, minTimestamp: nil, maxTimestamp: nil, namespaces: .just(Set([namespace])), forEachMedia: nil)
+        self.messageHistoryMetadataTable.removeInitialized(peerId)
+        self.cachedPeerDataTable.remove(id: peerId)
     }
     
     fileprivate func removeAllMessagesWithAuthor(_ peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace, forEachMedia: ((Media) -> Void)?) {

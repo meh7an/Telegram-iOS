@@ -2527,10 +2527,17 @@ public final class SqliteValueBox: ValueBox {
     }
     
     public func vacuum() {
-        var resultCode = self.database.execute("VACUUM")
-        precondition(resultCode)
-        resultCode = self.database.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-        precondition(resultCode)
+        let _ = self.database.execute("PRAGMA temp_store=FILE")
+        defer {
+            let _ = self.database.execute("PRAGMA temp_store=MEMORY")
+        }
+        if !self.database.execute("VACUUM") {
+            postboxLog("SqliteValueBox vacuum failed")
+            return
+        }
+        if !self.database.execute("PRAGMA wal_checkpoint(TRUNCATE)") {
+            postboxLog("SqliteValueBox vacuum checkpoint failed")
+        }
     }
 }
 
