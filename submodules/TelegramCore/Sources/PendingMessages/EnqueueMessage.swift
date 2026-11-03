@@ -879,6 +879,13 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
         }
     }
     
+    var messages = messages
+    if account.isSupportUser && supportSettings(transaction: transaction).sendAllSilently {
+        messages = messages.map { transformedMedia, message in
+            return (transformedMedia, message.withUpdatedAttributes(supportSilentMessageAttributes))
+        }
+    }
+    
     // Sending to a user whose chat still shows the report/block panel ends its suspicious state
     // (`CachedUserData.isSuspiciousPeer`): only the report and block flags go, so an Add Contact
     // offer stays. A scheduled message reaches no one yet and changes nothing.

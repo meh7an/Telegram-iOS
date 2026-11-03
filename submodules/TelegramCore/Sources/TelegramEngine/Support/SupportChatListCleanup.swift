@@ -23,6 +23,13 @@ func supportChatListCleanupRemovesChat(_ chat: SupportChatListCleanupChatInfo) -
     return chat.isOneToOne && !chat.isAccountPeer && !chat.isServiceUser && !chat.isNamedByFolder && !chat.isPinned && !chat.hasStoredComposerState && !chat.hasUnsentMessages && !chat.hasOpenHistoryView
 }
 
+func supportChatListCleanupRuns(cutoffAtLaunch: Int32?, cutoff: Int32?) -> Bool {
+    guard let cutoff, cutoff == cutoffAtLaunch else {
+        return false
+    }
+    return cutoff > 0
+}
+
 func supportChatListCleanupRunsVacuum(removedChatCount: Int, databaseSize: Int64, freeSpace: Int64) -> Bool {
     return removedChatCount >= cleanupVacuumMinRemovedChatCount && freeSpace >= databaseSize * 2
 }
@@ -123,6 +130,7 @@ private final class SupportChatListCleanupContext {
     private let loadTillDisposable = MetaDisposable()
     private let actionDisposable = MetaDisposable()
 
+    private var loadTillAtLaunch: Int32?
     private var loadTill: Int32?
     private var cutoff: Int32?
     private var groupIds: [PeerGroupId] = [.root, Namespaces.PeerGroup.archive]
@@ -139,13 +147,23 @@ private final class SupportChatListCleanupContext {
     func start() {
         self.loadTillDisposable.set((self.supportContext.chatListLoadTill
         |> deliverOn(self.queue)).start(next: { [weak self] loadTill in
-            self?.loadTill = loadTill
-        }))
-        self.after(cleanupStartDelay) { [weak self] in
-            guard let self, let loadTill = self.loadTill else {
+            guard let self else {
                 return
             }
-            self.cutoff = loadTill
+            if self.loadTillAtLaunch == nil {
+                self.loadTillAtLaunch = loadTill
+            }
+            self.loadTill = loadTill
+        }))
+        self.after(cleanupStartDelay) { [weak self] in
+            guard let self else {
+                return
+            }
+            guard supportChatListCleanupRuns(cutoffAtLaunch: self.loadTillAtLaunch, cutoff: self.loadTill) else {
+                Logger.shared.log("SupportChatListCleanup", "not running, cutoff \(String(describing: self.loadTill)), at launch \(String(describing: self.loadTillAtLaunch))")
+                return
+            }
+            self.cutoff = self.loadTill
             self.placeBoundary()
         }
     }

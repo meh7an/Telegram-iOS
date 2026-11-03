@@ -19,11 +19,30 @@ public func supportModeWasLost(phone: String?, isSupportUser: Bool) -> Bool {
 }
 
 public func supportChatListHoleIsHeld(holeTimestamp: Int32, loadTill: Int32) -> Bool {
-    return holeTimestamp <= loadTill
+    return loadTill > 0 && holeTimestamp <= loadTill
 }
 
 func supportChatListInitialLoadTill(now: Int32, period: Int32) -> Int32 {
+    if period == SupportSettings.allChatsLoadPeriod {
+        return 0
+    }
     return max(now - period, 0)
+}
+
+public enum SupportChatListLoadState: Equatable {
+    case allLoaded
+    case loading
+    case held(holeTimestamp: Int32)
+}
+
+func supportChatListLoadState(holeTimestamps: [Int32], loadTill: Int32) -> SupportChatListLoadState {
+    guard let latestHole = holeTimestamps.max() else {
+        return .allLoaded
+    }
+    if holeTimestamps.contains(where: { !supportChatListHoleIsHeld(holeTimestamp: $0, loadTill: loadTill) }) {
+        return .loading
+    }
+    return .held(holeTimestamp: latestHole)
 }
 
 func supportChatListLoadTillAfterLoadMore(current: Int32, holeTimestamp: Int32, period: Int32) -> Int32 {

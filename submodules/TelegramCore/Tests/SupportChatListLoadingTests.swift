@@ -44,7 +44,7 @@ final class SupportChatListLoadingTests: XCTestCase {
     }
 
     func testContextPublishesLoadMore() {
-        let context = SupportContext()
+        let context = SupportContext(settings: .single(.default))
         var values: [Int32] = []
         let disposable = context.chatListLoadTill.start(next: { value in
             values.append(value)

@@ -4255,6 +4255,33 @@ private func helpSearchableItems(context: AccountContext) -> [SettingsSearchable
     return items
 }
 
+private func supportSearchableItems(context: AccountContext) -> [SettingsSearchableItem] {
+    guard context.supportContext != nil else {
+        return []
+    }
+    
+    let title = "Support Settings"
+    let item: (String, String, [String], [String]) -> SettingsSearchableItem = { id, itemTitle, alternate, breadcrumbs in
+        return SettingsSearchableItem(
+            id: id,
+            title: itemTitle,
+            alternate: alternate,
+            icon: .support,
+            breadcrumbs: breadcrumbs,
+            present: { context, _, present in
+                present(.push, supportSettingsController(context: context))
+            }
+        )
+    }
+    
+    return [
+        item("support", title, ["support"], []),
+        item("support/silent", "Send all messages without sound", ["silent", "sound", "mute"], [title]),
+        item("support/chats-period", "Load chats for a period", ["period", "days", "week", "month", "year"], [title]),
+        item("support/load-more", "Load more chats", ["load", "more", "older"], [title])
+    ]
+}
+
 func settingsSearchableItems(
     context: AccountContext,
     notificationExceptionsList: Signal<NotificationExceptionsList?, NoError> = .single(nil),
@@ -4429,6 +4456,9 @@ func settingsSearchableItems(
         
         let appearanceItems = appearanceSearchableItems(context: context)
         allItems.append(contentsOf: appearanceItems)
+        
+        let supportItems = supportSearchableItems(context: context)
+        allItems.append(contentsOf: supportItems)
         
         let powerSavingItems = energySavingSearchableItems(context: context)
         allItems.append(contentsOf: powerSavingItems)
