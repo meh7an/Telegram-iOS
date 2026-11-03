@@ -43,9 +43,25 @@ public final class SupportContext {
     private let receivedDraftsPipe = ValuePipe<[SupportReceivedDraft]>()
     private let occupationsPromise = ValuePromise<[PeerId: SupportOccupation]>([:], ignoreRepeated: true)
     private let chatOrderLaunchResortTaken = Atomic<Bool>(value: false)
+    private let searchResults = Atomic<(owner: ObjectIdentifier, peerIds: [PeerId])?>(value: nil)
     
     func takeChatOrderLaunchResort() -> Bool {
         return !self.chatOrderLaunchResortTaken.swap(true)
+    }
+    
+    // The chats an open search lists, in order. A send walks these instead of the chat list while they are set.
+    public var searchResultPeerIds: [PeerId]? {
+        return self.searchResults.with { $0?.peerIds }
+    }
+    
+    public func setSearchResults(peerIds: [PeerId]?, owner: AnyObject) {
+        let ownerId = ObjectIdentifier(owner)
+        let _ = self.searchResults.modify { current in
+            if let peerIds {
+                return (ownerId, peerIds)
+            }
+            return current?.owner == ownerId ? nil : current
+        }
     }
     
     public var supportName: Signal<String, NoError> {
