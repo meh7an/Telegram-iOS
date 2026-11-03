@@ -41,6 +41,7 @@ public final class SupportContext {
     private let nextOpenChatToken = Atomic<Int>(value: 0)
     private let openChatPromise = ValuePromise<PeerId?>(nil, ignoreRepeated: true)
     private let receivedDraftsPipe = ValuePipe<[SupportReceivedDraft]>()
+    private let occupationsPromise = ValuePromise<[PeerId: SupportOccupation]>([:], ignoreRepeated: true)
     
     public var supportName: Signal<String, NoError> {
         return self.supportNamePromise.get()
@@ -114,6 +115,15 @@ public final class SupportContext {
     
     var receivedDrafts: Signal<[SupportReceivedDraft], NoError> {
         return self.receivedDraftsPipe.signal()
+    }
+    
+    // Chats other agents hold, until two seconds past their claim.
+    public var occupations: Signal<[PeerId: SupportOccupation], NoError> {
+        return self.occupationsPromise.get()
+    }
+    
+    func setOccupations(_ occupations: [PeerId: SupportOccupation]) {
+        self.occupationsPromise.set(occupations)
     }
     
     public func currentUserInfo(peerId: PeerId) -> SupportUserInfo? {

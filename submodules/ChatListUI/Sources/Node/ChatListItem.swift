@@ -162,6 +162,7 @@ public enum ChatListItemContent {
         public var displayAsTopicList: Bool
         public var tags: [Tag]
         public var customMessageListData: CustomMessageListData?
+        public var supportOccupation: String?
         
         public init(
             messages: [EngineMessage],
@@ -188,8 +189,10 @@ public enum ChatListItemContent {
             requiresPremiumForMessaging: Bool,
             displayAsTopicList: Bool,
             tags: [Tag],
-            customMessageListData: CustomMessageListData? = nil
+            customMessageListData: CustomMessageListData? = nil,
+            supportOccupation: String? = nil
         ) {
+            self.supportOccupation = supportOccupation
             self.messages = messages
             self.peer = peer
             self.avatarPeer = avatarPeer
@@ -2319,6 +2322,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             var topForumTopicItems: [EngineChatList.ForumTopicData] = []
             var autoremoveTimeout: Int32?
             var itemTags: [ChatListItemContent.Tag] = []
+            var supportOccupation: String?
             var isCommunity = false
             var displayCommunityAvatarBadge = false
             
@@ -2366,6 +2370,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let topForumTopicItemsValue = peerData.topForumTopicItems
                     
                     itemTags = peerData.tags
+                    supportOccupation = peerData.supportOccupation
                 
                     autoremoveTimeout = peerData.autoremoveTimeout
                 
@@ -2804,7 +2809,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         foldedRichTextPreview = nil
                     }
                 
-                    if inlineAuthorPrefix == nil, let mediaDraftContentType {
+                    if let supportOccupation {
+                        attributedText = NSAttributedString(string: supportOccupation, font: textFont, textColor: item.presentationData.theme.list.freeTextSuccessColor)
+                    } else if inlineAuthorPrefix == nil, let mediaDraftContentType {
                         hasDraft = true
                         authorAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Draft, font: textFont, textColor: theme.messageDraftTextColor)
                         

@@ -13,9 +13,9 @@ struct SupportReceivedDraft {
     var text: String?
 }
 
-struct SupportOccupation: Equatable {
-    var till: Int32
-    var name: String
+public struct SupportOccupation: Equatable {
+    public var till: Int32
+    public var name: String
 }
 
 func supportOccupationTag(installationTag: UInt64) -> UInt32 {
@@ -197,6 +197,7 @@ private final class SupportOccupationManager {
     private let network: Network
     private let accountPeerId: PeerId
     private let ownTag: UInt32
+    private let updatedOccupations: ([PeerId: SupportOccupation]) -> Void
 
     private var normalizedName: String?
     private var openPeerId: PeerId?
@@ -210,12 +211,13 @@ private final class SupportOccupationManager {
     private let deliveredDisposable = MetaDisposable()
     private let claimDisposable = MetaDisposable()
 
-    init(queue: Queue, postbox: Postbox, network: Network, accountPeerId: PeerId, ownTag: UInt32) {
+    init(queue: Queue, postbox: Postbox, network: Network, accountPeerId: PeerId, ownTag: UInt32, updatedOccupations: @escaping ([PeerId: SupportOccupation]) -> Void) {
         self.queue = queue
         self.postbox = postbox
         self.network = network
         self.accountPeerId = accountPeerId
         self.ownTag = ownTag
+        self.updatedOccupations = updatedOccupations
     }
 
     deinit {
@@ -379,6 +381,7 @@ private final class SupportOccupationManager {
             self.expiryTimer = timer
             timer.start()
         }
+        self.updatedOccupations(self.occupied)
         if expiredOpenPeer {
             self.occupyIfNotYet()
         }
@@ -396,7 +399,9 @@ func managedSupportOccupation(postbox: Postbox, network: Network, accountPeerId:
         }
         |> deliverOn(queue)).start(next: { installationTag in
             let object = QueueLocalObject(queue: queue, generate: {
-                return SupportOccupationManager(queue: queue, postbox: postbox, network: network, accountPeerId: accountPeerId, ownTag: supportOccupationTag(installationTag: installationTag))
+                return SupportOccupationManager(queue: queue, postbox: postbox, network: network, accountPeerId: accountPeerId, ownTag: supportOccupationTag(installationTag: installationTag), updatedOccupations: { occupations in
+                    supportContext.setOccupations(occupations)
+                })
             })
             let _ = manager.swap(object)
 
