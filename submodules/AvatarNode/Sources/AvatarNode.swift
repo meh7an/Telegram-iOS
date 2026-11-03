@@ -27,6 +27,7 @@ private let myNotesIcon = generateTintedImage(image: UIImage(bundleImageName: "A
 private let cameraIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/CameraIcon"), color: .white)
 private let storyIcon = generateTintedImage(image: UIImage(bundleImageName: "Share/Story"), color: .white)
 private let supportAbuseBotIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionReport"), color: .white)
+private let supportAbuseBotDarkIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionReport"), color: .black)
 
 public func supportAvatarImageOverride(isSupportAccount: Bool, peer: EnginePeer?) -> AvatarNodeImageOverride? {
     guard isSupportAccount, case let .user(user) = peer, user.botInfo != nil, peer?.smallProfileImage == nil else {
@@ -118,7 +119,11 @@ public func calculateAvatarColors(context: AccountContext?, explicitColorIndex: 
         } else if case .repliesIcon = icon {
             colors = AvatarNode.savedMessagesColors
         } else if case .supportAbuseBotIcon = icon {
-            colors = AvatarNode.supportAbuseBotColors
+            if let theme, theme.overallDarkAppearance {
+                colors = AvatarNode.supportAbuseBotDarkColors
+            } else {
+                colors = AvatarNode.supportAbuseBotColors
+            }
         } else if case let .anonymousSavedMessagesIcon(isColored) = icon {
             if isColored {
                 colors = AvatarNode.savedMessagesColors
@@ -358,6 +363,10 @@ public final class AvatarNode: ASDisplayNode {
     
     static let supportAbuseBotColors: [UIColor] = [
         UIColor(rgb: 0x000000), UIColor(rgb: 0x4a4a4c)
+    ]
+    
+    static let supportAbuseBotDarkColors: [UIColor] = [
+        UIColor(rgb: 0xc7c7cc), UIColor(rgb: 0xffffff)
     ]
     
     static let repostColors: [UIColor] = [
@@ -1100,7 +1109,8 @@ public final class AvatarNode: ASDisplayNode {
                     context.scaleBy(x: factor, y: -factor)
                     context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
                     
-                    if let supportAbuseBotIcon = supportAbuseBotIcon {
+                    let isDark = parameters.theme?.overallDarkAppearance ?? false
+                    if let supportAbuseBotIcon = isDark ? supportAbuseBotDarkIcon : supportAbuseBotIcon {
                         context.draw(supportAbuseBotIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - supportAbuseBotIcon.size.width) / 2.0), y: floor((bounds.size.height - supportAbuseBotIcon.size.height) / 2.0)), size: supportAbuseBotIcon.size))
                     }
                 } else if case let .anonymousSavedMessagesIcon(isColored) = parameters.icon {
