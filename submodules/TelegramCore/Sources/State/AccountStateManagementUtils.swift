@@ -4331,11 +4331,16 @@ func replayFinalState(
 
     let mappedWalletMessageIds = applyWalletTransferMessageIds(transaction: transaction, mappings: finalState.state.updatedOutgoingUniqueMessageIds)
     
+    let supportAccount = isSupportAccount(transaction: transaction, accountPeerId: accountPeerId)
+    
     for operation in optimizedOperations(finalState.state.operations) {
         walletTonConnectEventBatch.append(contentsOf: walletTonConnectEvents(operation: operation))
         // The server's read state for a channel the account is not a member of is not kept
         // (NonMemberChannelReadState.swift). A join earlier in this replay is already stored.
         if readStateOperationTargetsNonMember(operation, getPeer: { transaction.getPeer($0) }) {
+            continue
+        }
+        if supportAccount && readStateOperationTargetsDeletedUser(operation, getPeer: { transaction.getPeer($0) }) {
             continue
         }
         switch operation {
