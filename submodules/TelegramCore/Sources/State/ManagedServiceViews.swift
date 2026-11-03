@@ -16,6 +16,7 @@ func managedServiceViews(accountPeerId: PeerId, network: Network, postbox: Postb
         }))
         disposable.add(managedSupportChatListCleanup(postbox: postbox, accountPeerId: accountPeerId, supportContext: supportContext).start())
         disposable.add(managedSupportDraftSweep(postbox: postbox).start())
+        disposable.add(managedSupportFolderChats(postbox: postbox, network: network, accountPeerId: accountPeerId).start())
         disposable.add(managedSupportOccupation(postbox: postbox, network: network, accountPeerId: accountPeerId, stateManager: stateManager, pendingMessageManager: pendingMessageManager, supportContext: supportContext).start())
     }
     
