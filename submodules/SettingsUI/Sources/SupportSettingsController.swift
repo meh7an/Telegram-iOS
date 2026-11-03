@@ -50,6 +50,7 @@ private enum SupportSettingsSection: Int32 {
     case switching
     case sending
     case order
+    case quiet
     case period
     case loading
     case templates
@@ -62,6 +63,9 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         case sendSilently
         case fixChatsOrder
         case fixChatsOrderInfo
+        case automaticMediaDownload
+        case inAppNotifications
+        case quietInfo
         case periodHeader
         case period(Int32)
         case periodInfo
@@ -80,6 +84,9 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
     case sendSilently(String, Bool)
     case fixChatsOrder(String, Bool)
     case fixChatsOrderInfo(String)
+    case automaticMediaDownload(String, Bool)
+    case inAppNotifications(String, Bool)
+    case quietInfo(String)
     case periodHeader(String)
     case period(index: Int32, period: Int32, title: String, isSelected: Bool)
     case periodInfo(String)
@@ -100,6 +107,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return SupportSettingsSection.sending.rawValue
         case .fixChatsOrder, .fixChatsOrderInfo:
             return SupportSettingsSection.order.rawValue
+        case .automaticMediaDownload, .inAppNotifications, .quietInfo:
+            return SupportSettingsSection.quiet.rawValue
         case .periodHeader, .period, .periodInfo:
             return SupportSettingsSection.period.rawValue
         case .loadMore, .loadMoreInfo:
@@ -121,6 +130,12 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return .fixChatsOrder
         case .fixChatsOrderInfo:
             return .fixChatsOrderInfo
+        case .automaticMediaDownload:
+            return .automaticMediaDownload
+        case .inAppNotifications:
+            return .inAppNotifications
+        case .quietInfo:
+            return .quietInfo
         case .periodHeader:
             return .periodHeader
         case let .period(_, period, _, _):
@@ -158,10 +173,16 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return 5
         case .fixChatsOrderInfo:
             return 6
-        case .periodHeader:
+        case .automaticMediaDownload:
             return 7
+        case .inAppNotifications:
+            return 8
+        case .quietInfo:
+            return 9
+        case .periodHeader:
+            return 10
         case let .period(index, _, _, _):
-            return 8 + index
+            return 11 + index
         case .periodInfo:
             return 100
         case .loadMore:
@@ -216,6 +237,22 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     return settings
                 }
             })
+        case let .automaticMediaDownload(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateSettings { settings in
+                    var settings = settings
+                    settings.automaticMediaDownload = value
+                    return settings
+                }
+            })
+        case let .inAppNotifications(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateSettings { settings in
+                    var settings = settings
+                    settings.inAppNotifications = value
+                    return settings
+                }
+            })
         case let .periodHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .period(_, period, title, isSelected):
@@ -226,7 +263,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     return settings
                 }
             })
-        case let .fixChatsOrderInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
+        case let .fixChatsOrderInfo(text), let .quietInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .templatesHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
@@ -291,6 +328,10 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
 
     entries.append(.fixChatsOrder("Fix chats order", settings.fixChatsOrder))
     entries.append(.fixChatsOrderInfo("Chats keep their place while messages arrive. Pinning a chat or restarting the app re-sorts the list."))
+
+    entries.append(.automaticMediaDownload("Auto-download media", settings.automaticMediaDownload))
+    entries.append(.inAppNotifications("In-app notifications", settings.inAppNotifications))
+    entries.append(.quietInfo("These apply to this account only. With auto-download off, media loads when you tap it. With notifications off, new messages play no sound and show no banner while the app is open."))
 
     entries.append(.periodHeader("LOAD CHATS FOR A PERIOD"))
     for (index, option) in supportChatLoadPeriods.enumerated() {

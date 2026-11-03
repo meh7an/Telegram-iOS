@@ -12,7 +12,7 @@ public struct SupportSettings: Codable, Equatable {
     public static let allChatsLoadPeriod: Int32 = 0
 
     public static var `default`: SupportSettings {
-        return SupportSettings(switchBehavior: .next, fixChatsOrder: true, templatesAutocomplete: true, chatLoadPeriod: 7 * 24 * 60 * 60, allSearchResults: false, sendAllSilently: false)
+        return SupportSettings(switchBehavior: .next, fixChatsOrder: true, templatesAutocomplete: true, chatLoadPeriod: 7 * 24 * 60 * 60, allSearchResults: false, sendAllSilently: false, automaticMediaDownload: false, inAppNotifications: false)
     }
 
     public var switchBehavior: SupportSwitchBehavior
@@ -21,14 +21,18 @@ public struct SupportSettings: Codable, Equatable {
     public var chatLoadPeriod: Int32
     public var allSearchResults: Bool
     public var sendAllSilently: Bool
+    public var automaticMediaDownload: Bool
+    public var inAppNotifications: Bool
 
-    public init(switchBehavior: SupportSwitchBehavior, fixChatsOrder: Bool, templatesAutocomplete: Bool, chatLoadPeriod: Int32, allSearchResults: Bool, sendAllSilently: Bool) {
+    public init(switchBehavior: SupportSwitchBehavior, fixChatsOrder: Bool, templatesAutocomplete: Bool, chatLoadPeriod: Int32, allSearchResults: Bool, sendAllSilently: Bool, automaticMediaDownload: Bool, inAppNotifications: Bool) {
         self.switchBehavior = switchBehavior
         self.fixChatsOrder = fixChatsOrder
         self.templatesAutocomplete = templatesAutocomplete
         self.chatLoadPeriod = chatLoadPeriod
         self.allSearchResults = allSearchResults
         self.sendAllSilently = sendAllSilently
+        self.automaticMediaDownload = automaticMediaDownload
+        self.inAppNotifications = inAppNotifications
     }
 
     public init(from decoder: Decoder) throws {
@@ -41,6 +45,8 @@ public struct SupportSettings: Codable, Equatable {
         self.chatLoadPeriod = try container.decodeIfPresent(Int32.self, forKey: "chatLoadPeriod") ?? defaults.chatLoadPeriod
         self.allSearchResults = try container.decodeIfPresent(Bool.self, forKey: "allSearchResults") ?? defaults.allSearchResults
         self.sendAllSilently = try container.decodeIfPresent(Bool.self, forKey: "sendAllSilently") ?? defaults.sendAllSilently
+        self.automaticMediaDownload = try container.decodeIfPresent(Bool.self, forKey: "automaticMediaDownload") ?? defaults.automaticMediaDownload
+        self.inAppNotifications = try container.decodeIfPresent(Bool.self, forKey: "inAppNotifications") ?? defaults.inAppNotifications
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -52,6 +58,8 @@ public struct SupportSettings: Codable, Equatable {
         try container.encode(self.chatLoadPeriod, forKey: "chatLoadPeriod")
         try container.encode(self.allSearchResults, forKey: "allSearchResults")
         try container.encode(self.sendAllSilently, forKey: "sendAllSilently")
+        try container.encode(self.automaticMediaDownload, forKey: "automaticMediaDownload")
+        try container.encode(self.inAppNotifications, forKey: "inAppNotifications")
     }
 }
 

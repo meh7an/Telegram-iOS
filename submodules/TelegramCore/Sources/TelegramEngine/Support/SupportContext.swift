@@ -34,6 +34,10 @@ public final class SupportContext {
     private let currentChatListLoad = Atomic<ChatListLoad?>(value: nil)
     private let chatListLoadTillPromise = ValuePromise<Int32>(ignoreRepeated: true)
     private var settingsDisposable: Disposable?
+    private var quietSettingsDisposable: Disposable?
+    private let automaticMediaDownloadValue = Atomic<Bool>(value: false)
+    private let automaticMediaDownloadPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    private let inAppNotificationsValue = Atomic<Bool>(value: false)
     private let supportNamePromise = ValuePromise<String>(ignoreRepeated: true)
     private let userInfoState = Atomic(value: UserInfoState())
     private let userInfoUpdated = ValuePipe<PeerId>()
@@ -72,6 +76,18 @@ public final class SupportContext {
         return self.chatListLoadTillPromise.get()
     }
     
+    public var automaticMediaDownload: Signal<Bool, NoError> {
+        return self.automaticMediaDownloadPromise.get()
+    }
+    
+    public var currentAutomaticMediaDownload: Bool {
+        return self.automaticMediaDownloadValue.with { $0 }
+    }
+    
+    public var currentInAppNotifications: Bool {
+        return self.inAppNotificationsValue.with { $0 }
+    }
+    
     init(settings: Signal<SupportSettings, NoError>) {
         self.settingsDisposable = (settings
         |> map { settings -> Int32 in
@@ -85,10 +101,19 @@ public final class SupportContext {
             let _ = self.currentChatListLoad.swap(ChatListLoad(period: period, till: till))
             self.chatListLoadTillPromise.set(till)
         })
+        self.quietSettingsDisposable = settings.start(next: { [weak self] settings in
+            guard let self else {
+                return
+            }
+            let _ = self.automaticMediaDownloadValue.swap(settings.automaticMediaDownload)
+            let _ = self.inAppNotificationsValue.swap(settings.inAppNotifications)
+            self.automaticMediaDownloadPromise.set(settings.automaticMediaDownload)
+        })
     }
     
     deinit {
         self.settingsDisposable?.dispose()
+        self.quietSettingsDisposable?.dispose()
     }
     
     public func loadMoreChats(holeTimestamp: Int32) {

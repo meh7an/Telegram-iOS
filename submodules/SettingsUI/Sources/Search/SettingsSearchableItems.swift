@@ -4278,7 +4278,9 @@ private func supportSearchableItems(context: AccountContext) -> [SettingsSearcha
         item("support", title, ["support"], []),
         item("support/silent", "Send all messages without sound", ["silent", "sound", "mute"], [title]),
         item("support/chats-period", "Load chats for a period", ["period", "days", "week", "month", "year"], [title]),
-        item("support/load-more", "Load more chats", ["load", "more", "older"], [title])
+        item("support/load-more", "Load more chats", ["load", "more", "older"], [title]),
+        item("support/auto-download", "Auto-download media", ["auto", "download", "media"], [title]),
+        item("support/in-app-notifications", "In-app notifications", ["notifications", "banner", "sound", "vibrate"], [title])
     ]
 }
 
@@ -4510,7 +4512,7 @@ func settingsSearchableItems(
                 guard let id = item.id as? String else {
                     return false
                 }
-                return id == "calls" || id.hasPrefix("calls/") || id == "notifications/new-contacts" || id.hasPrefix("privacy/passkey") || id == "saved-messages" || id == "edit/username" || id == "privacy/data-settings/delete-cloud-drafts" || id == "my-profile" || id.hasPrefix("my-profile/")
+                return id == "calls" || id.hasPrefix("calls/") || id == "notifications/new-contacts" || id.hasPrefix("privacy/passkey") || id == "saved-messages" || id == "edit/username" || id == "privacy/data-settings/delete-cloud-drafts" || id == "my-profile" || id.hasPrefix("my-profile/") || id == "edit" || (id.hasPrefix("edit/") && id != "edit/add-account" && id != "edit/log-out") || id.hasPrefix("profile-photo") || id.hasPrefix("data/auto-download") || id.hasPrefix("notifications/in-app")
             })
         }
         

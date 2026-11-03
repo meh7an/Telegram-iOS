@@ -6128,6 +6128,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             var navigationFlags = PeerInfoNavigationFlags()
             navigationFlags.isEditing = self.state.isEditing
             navigationFlags.isSettings = self.isSettings
+            navigationFlags.isSettingsEditDisabled = self.context.supportContext != nil
             navigationFlags.isMyProfile = self.isMyProfile
             navigationFlags.canEdit = peerInfoCanEdit(peer: self.data?.peer, chatLocation: self.chatLocation, threadData: self.data?.threadData, cachedData: self.data?.cachedData, isContact: self.data?.isContact)
             if let data = self.data, !data.isPremiumRequiredForStoryPosting || data.accountIsPremium, case let .channel(channel) = data.peer, channel.hasPermission(.postStories) {

@@ -1227,6 +1227,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
         
         if WalletConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 }).isAvailable,
+           context.supportContext == nil,
            let peer = message.peers[message.id.peerId].flatMap(EnginePeer.init), case .user = peer,
            message.media.contains(where: { media in
                if let action = media as? TelegramMediaAction, case .gramTransfer = action.action {
