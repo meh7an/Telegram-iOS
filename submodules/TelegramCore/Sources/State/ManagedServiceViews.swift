@@ -11,6 +11,9 @@ func managedServiceViews(accountPeerId: PeerId, network: Network, postbox: Postb
     disposable.add(managedChatListHoles(network: network, postbox: postbox, accountPeerId: accountPeerId, supportContext: supportContext).start())
     disposable.add(managedForumTopicListHoles(network: network, postbox: postbox, accountPeerId: accountPeerId).start())
     if let supportContext, !supplementary {
+        disposable.add(_internal_supportName(network: network, postbox: postbox).start(next: { name in
+            supportContext.setSupportName(name)
+        }))
         disposable.add(managedSupportChatListCleanup(postbox: postbox, accountPeerId: accountPeerId, supportContext: supportContext).start())
     }
     
