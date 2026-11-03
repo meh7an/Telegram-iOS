@@ -26,6 +26,17 @@ private let anonymousSavedMessagesDarkIcon = generateTintedImage(image: UIImage(
 private let myNotesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/MyNotesIcon"), color: .white)
 private let cameraIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/CameraIcon"), color: .white)
 private let storyIcon = generateTintedImage(image: UIImage(bundleImageName: "Share/Story"), color: .white)
+private let supportAbuseBotIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionReport"), color: .white)
+
+public func supportAvatarImageOverride(isSupportAccount: Bool, peer: EnginePeer?) -> AvatarNodeImageOverride? {
+    guard isSupportAccount, case let .user(user) = peer, user.botInfo != nil, peer?.smallProfileImage == nil else {
+        return nil
+    }
+    guard let addressName = user.addressName, addressName.lowercased() == "abusebot" else {
+        return nil
+    }
+    return .supportAbuseBotIcon
+}
 
 public func avatarPlaceholderFont(size: CGFloat) -> UIFont {
     return Font.with(size: size, design: .round, weight: .bold)
@@ -106,6 +117,8 @@ public func calculateAvatarColors(context: AccountContext?, explicitColorIndex: 
             colors = AvatarNode.repostColors
         } else if case .repliesIcon = icon {
             colors = AvatarNode.savedMessagesColors
+        } else if case .supportAbuseBotIcon = icon {
+            colors = AvatarNode.supportAbuseBotColors
         } else if case let .anonymousSavedMessagesIcon(isColored) = icon {
             if isColored {
                 colors = AvatarNode.savedMessagesColors
@@ -222,6 +235,7 @@ public enum AvatarNodeIcon: Equatable {
     case repostIcon
     case cameraIcon
     case storyIcon
+    case supportAbuseBotIcon
 }
 
 public enum AvatarNodeImageOverride: Equatable {
@@ -238,6 +252,7 @@ public enum AvatarNodeImageOverride: Equatable {
     case repostIcon
     case cameraIcon
     case storyIcon
+    case supportAbuseBotIcon
 }
 
 public enum AvatarNodeColorOverride {
@@ -339,6 +354,10 @@ public final class AvatarNode: ASDisplayNode {
     
     static let savedMessagesColors: [UIColor] = [
         UIColor(rgb: 0x2a9ef1), UIColor(rgb: 0x72d5fd)
+    ]
+    
+    static let supportAbuseBotColors: [UIColor] = [
+        UIColor(rgb: 0x000000), UIColor(rgb: 0x4a4a4c)
     ]
     
     static let repostColors: [UIColor] = [
@@ -638,6 +657,9 @@ public final class AvatarNode: ASDisplayNode {
                 case .storyIcon:
                     representation = nil
                     icon = .storyIcon
+                case .supportAbuseBotIcon:
+                    representation = nil
+                    icon = .supportAbuseBotIcon
                 }
             } else if peer?.restrictionText(platform: "ios", contentSettings: contentSettings) == nil {
                 representation = peer?.smallProfileImage
@@ -802,6 +824,7 @@ public final class AvatarNode: ASDisplayNode {
             storeUnrounded: Bool = false,
             cutoutRect: CGRect? = nil
         ) {
+            let overrideImage = overrideImage ?? supportAvatarImageOverride(isSupportAccount: genericContext.supportContext != nil, peer: peer)
             var synchronousLoad = synchronousLoad
             var representation: TelegramMediaImageRepresentation?
             var icon = AvatarNodeIcon.none
@@ -845,6 +868,9 @@ public final class AvatarNode: ASDisplayNode {
                 case .storyIcon:
                     representation = nil
                     icon = .storyIcon
+                case .supportAbuseBotIcon:
+                    representation = nil
+                    icon = .supportAbuseBotIcon
                 }
             } else if peer?.restrictionText(platform: "ios", contentSettings: genericContext.currentContentSettings.with { $0 }) == nil {
                 representation = peer?.smallProfileImage
@@ -1067,6 +1093,15 @@ public final class AvatarNode: ASDisplayNode {
                     
                     if let repliesIcon = repliesIcon {
                         context.draw(repliesIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - repliesIcon.size.width) / 2.0), y: floor((bounds.size.height - repliesIcon.size.height) / 2.0)), size: repliesIcon.size))
+                    }
+                } else if case .supportAbuseBotIcon = parameters.icon {
+                    let factor = bounds.size.width / 37.5
+                    context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
+                    context.scaleBy(x: factor, y: -factor)
+                    context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
+                    
+                    if let supportAbuseBotIcon = supportAbuseBotIcon {
+                        context.draw(supportAbuseBotIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - supportAbuseBotIcon.size.width) / 2.0), y: floor((bounds.size.height - supportAbuseBotIcon.size.height) / 2.0)), size: supportAbuseBotIcon.size))
                     }
                 } else if case let .anonymousSavedMessagesIcon(isColored) = parameters.icon {
                     let factor = bounds.size.width / 60.0
