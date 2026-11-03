@@ -1579,6 +1579,9 @@ public func privacyAndSecurityController(
             displayPasskeys = true
         }
     }
+    if context.supportContext != nil {
+        displayPasskeys = false
+    }
     
     let webBrowserData = combineLatest(
         context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings, ApplicationSpecificSharedDataKeys.webBrowserSettings]),

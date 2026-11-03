@@ -1112,6 +1112,7 @@ public protocol TelegramRootControllerInterface: NavigationController {
     func getPrivacySettings() -> Promise<AccountPrivacySettings?>?
     func getNotificationExceptions() -> Promise<NotificationExceptionsList?>?
         
+    func openAddContact()
     func openContacts()
     func openSettings(edit: Bool)
     func openBirthdaySetup()

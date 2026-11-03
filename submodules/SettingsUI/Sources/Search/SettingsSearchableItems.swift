@@ -4505,6 +4505,15 @@ func settingsSearchableItems(
         )
         allItems.append(deleteAccount)
     
+        if context.supportContext != nil {
+            allItems.removeAll(where: { item in
+                guard let id = item.id as? String else {
+                    return false
+                }
+                return id == "calls" || id.hasPrefix("calls/") || id == "notifications/new-contacts" || id.hasPrefix("privacy/passkey") || id == "saved-messages" || id == "my-profile" || id.hasPrefix("my-profile/")
+            })
+        }
+        
         return allItems
     }
 }

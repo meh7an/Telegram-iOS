@@ -366,13 +366,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         }
                     )
                     
-                    self.primaryContext?.rightButton = NavigationBarComponent.Button(id: "compose",
-                        content: .icon(imageName: "Chat List/ComposeIcon"),
-                        tint: .accent,
-                        action: { [weak self] _ in
-                            self?.composePressed()
-                        }
-                    )
+                    if self.context.supportContext == nil {
+                        self.primaryContext?.rightButton = NavigationBarComponent.Button(id: "compose",
+                            content: .icon(imageName: "Chat List/ComposeIcon"),
+                            tint: .accent,
+                            action: { [weak self] _ in
+                                self?.composePressed()
+                            }
+                        )
+                    }
                     
                     //let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
                     //backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
@@ -7313,6 +7315,8 @@ private final class ChatListLocationContext {
                             self?.parentController?.editPressed()
                         }
                     )
+                } else if self.context.supportContext != nil {
+                    self.rightButton = nil
                 } else {
                     self.rightButton = NavigationBarComponent.Button(id: "compose",
                         content: .icon(imageName: "Chat List/ComposeIcon"),
