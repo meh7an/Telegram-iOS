@@ -333,6 +333,7 @@ public final class AccountStateManager {
         }
 
         fileprivate let walletTransferUpdatesPipe = ValuePipe<[WalletTransferUpdate]>()
+        fileprivate let supportReceivedDraftsPipe = ValuePipe<[SupportReceivedDraft]>()
         fileprivate let walletTonConnectUpdatesPipe = ValuePipe<[WalletTonConnectEvent]>()
 
         fileprivate let walletStateUpdatesPipe = ValuePipe<Api.WalletState>()
@@ -1146,6 +1147,9 @@ public final class AccountStateManager {
                             }
                             if !events.walletTransferUpdates.isEmpty {
                                 strongSelf.walletTransferUpdatesPipe.putNext(events.walletTransferUpdates)
+                            }
+                            if !events.supportReceivedDrafts.isEmpty {
+                                strongSelf.supportReceivedDraftsPipe.putNext(events.supportReceivedDrafts)
                             }
                             if !events.walletTonConnectEvents.isEmpty {
                                 strongSelf.walletTonConnectUpdatesPipe.putNext(events.walletTonConnectEvents)
@@ -2253,6 +2257,12 @@ public final class AccountStateManager {
     func walletTransferUpdates() -> Signal<[WalletTransferUpdate], NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.walletTransferUpdatesPipe.signal().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+
+    func supportReceivedDrafts() -> Signal<[SupportReceivedDraft], NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.supportReceivedDraftsPipe.signal().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
         }
     }
 

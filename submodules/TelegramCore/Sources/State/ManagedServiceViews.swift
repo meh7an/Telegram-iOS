@@ -16,6 +16,7 @@ func managedServiceViews(accountPeerId: PeerId, network: Network, postbox: Postb
         }))
         disposable.add(managedSupportChatListCleanup(postbox: postbox, accountPeerId: accountPeerId, supportContext: supportContext).start())
         disposable.add(managedSupportDraftSweep(postbox: postbox).start())
+        disposable.add(managedSupportOccupation(postbox: postbox, network: network, accountPeerId: accountPeerId, stateManager: stateManager, pendingMessageManager: pendingMessageManager, supportContext: supportContext).start())
     }
     
     disposable.add((_internal_refreshSeenStories(postbox: postbox, network: network) |> then(.complete() |> suspendAwareDelay(5 * 60 * 60, queue: .mainQueue())) |> restart).start())

@@ -1287,7 +1287,7 @@ func groupBoundaryPeer(_ peerId: PeerId, accountPeerId: PeerId) -> Api.Peer {
     }
 }
 
-func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId, groupId: PeerGroupId, hole: ChatListHole) -> Signal<Never, NoError> {
+func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId, supportContext: SupportContext?, groupId: PeerGroupId, hole: ChatListHole) -> Signal<Never, NoError> {
     let location: FetchChatListLocation
     switch groupId {
         case .root:
@@ -1305,7 +1305,10 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
         }
         return withResolvedAssociatedMessages(postbox: postbox, source: .network(network), accountPeerId: accountPeerId, parsedPeers: fetchedChats.peers, storeMessages: fetchedChats.storeMessages, resolveThreads: false, { transaction, additionalPeers, additionalMessages -> Void in
             updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: fetchedChats.peers.union(with: additionalPeers))
-            _internal_applyFetchedChatInputStates(transaction: transaction, accountPeerId: accountPeerId, inputStates: fetchedChats.inputStates)
+            let supportReceivedDrafts = _internal_applyFetchedChatInputStates(transaction: transaction, accountPeerId: accountPeerId, inputStates: fetchedChats.inputStates)
+            if let supportContext, !supportReceivedDrafts.isEmpty {
+                supportContext.addReceivedDrafts(supportReceivedDrafts)
+            }
 
             for (threadMessageId, data) in fetchedChats.threadInfos {
                 if let entry = StoredMessageHistoryThreadInfo(data.data) {

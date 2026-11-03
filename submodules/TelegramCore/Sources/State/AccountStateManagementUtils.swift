@@ -4131,6 +4131,7 @@ func replayFinalState(
     var groupCallMessageUpdates: [GroupCallMessageUpdate] = []
     var storyUpdates: [InternalStoryUpdate] = []
     var isContactUpdates: [(PeerId, Bool)] = []
+    var supportReceivedDrafts: [SupportReceivedDraft] = []
     var stickerPackOperations: [AccountStateUpdateStickerPacksOperation] = []
     var recentlyUsedStickers: [MediaId: (MessageIndex, TelegramMediaFile)] = [:]
     var slowModeLastMessageTimeouts:[PeerId : Int32] = [:]
@@ -5281,6 +5282,8 @@ func replayFinalState(
             case let .UpdateChatInputState(peerId, threadId, inputState):
                 if !supportKeepsDraftLocal(transaction: transaction, accountPeerId: accountPeerId, threadId: threadId) {
                     _internal_updateChatInputState(transaction: transaction, peerId: peerId, threadId: threadId, inputState: inputState)
+                } else if supportTracksOccupation(transaction: transaction, peerId: peerId, accountPeerId: accountPeerId) {
+                    supportReceivedDrafts.append(SupportReceivedDraft(peerId: peerId, text: supportReceivedDraftText(inputState)))
                 }
             case let .UpdateCall(call):
                 updatedCalls.append(call)
@@ -6427,6 +6430,7 @@ func replayFinalState(
         groupCallMessageUpdates: groupCallMessageUpdates,
         storyUpdates: storyUpdates,
         isContactUpdates: isContactUpdates,
+        supportReceivedDrafts: supportReceivedDrafts,
         delayNotificatonsUntil: delayNotificatonsUntil,
         updatedIncomingThreadReadStates: updatedIncomingThreadReadStates,
         updatedOutgoingThreadReadStates: updatedOutgoingThreadReadStates,

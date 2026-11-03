@@ -37,6 +37,10 @@ public final class SupportContext {
     private let supportNamePromise = ValuePromise<String>(ignoreRepeated: true)
     private let userInfoState = Atomic(value: UserInfoState())
     private let userInfoUpdated = ValuePipe<PeerId>()
+    private let openChats = Atomic<[(token: Int, peerId: PeerId)]>(value: [])
+    private let nextOpenChatToken = Atomic<Int>(value: 0)
+    private let openChatPromise = ValuePromise<PeerId?>(nil, ignoreRepeated: true)
+    private let receivedDraftsPipe = ValuePipe<[SupportReceivedDraft]>()
     
     public var supportName: Signal<String, NoError> {
         return self.supportNamePromise.get()
@@ -80,6 +84,36 @@ public final class SupportContext {
     
     func setSupportName(_ name: String) {
         self.supportNamePromise.set(name)
+    }
+    
+    // The most recently opened chat is the one occupied; disposing the result closes it.
+    public func openChat(peerId: PeerId) -> Disposable {
+        let token = self.nextOpenChatToken.modify { $0 + 1 }
+        let current = self.openChats.modify { chats in
+            return chats + [(token, peerId)]
+        }
+        self.openChatPromise.set(current.last?.peerId)
+        return ActionDisposable { [weak self] in
+            guard let self else {
+                return
+            }
+            let current = self.openChats.modify { chats in
+                return chats.filter { $0.token != token }
+            }
+            self.openChatPromise.set(current.last?.peerId)
+        }
+    }
+    
+    var openChat: Signal<PeerId?, NoError> {
+        return self.openChatPromise.get()
+    }
+    
+    func addReceivedDrafts(_ drafts: [SupportReceivedDraft]) {
+        self.receivedDraftsPipe.putNext(drafts)
+    }
+    
+    var receivedDrafts: Signal<[SupportReceivedDraft], NoError> {
+        return self.receivedDraftsPipe.signal()
     }
     
     public func currentUserInfo(peerId: PeerId) -> SupportUserInfo? {
