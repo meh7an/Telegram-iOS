@@ -218,7 +218,7 @@ public extension TelegramEngine {
             return _internal_supportPeerId(account: self.account)
         }
         
-        public func refreshSupportUserInfo(peerId: PeerId) -> Signal<Never, NoError> {
+        public func refreshSupportUserInfo(peerId: PeerId) -> Signal<Never, RefreshSupportUserInfoError> {
             return _internal_refreshSupportUserInfo(account: self.account, peerId: peerId)
         }
         

@@ -25,6 +25,23 @@ public enum SaveSupportUserInfoError {
     case generic
 }
 
+public enum RefreshSupportUserInfoError {
+    case generic
+}
+
+public let supportUserInfoMaxLength = 16 * 1024
+
+public func supportUserInfoLabel(author: String, dateText: String) -> String {
+    return author.isEmpty ? dateText : "\(author), \(dateText)"
+}
+
+public func supportChatTitleWarning(peerId: PeerId, accountPeerId: PeerId, hasUserInfo: Bool) -> String? {
+    if !hasUserInfo || peerId == accountPeerId || peerId.namespace != Namespaces.Peer.CloudUser {
+        return nil
+    }
+    return "\u{26A0}\u{FE0F} check info"
+}
+
 func supportInstallationTag(transaction: Transaction) -> UInt64 {
     if let stored = transaction.getPreferencesEntry(key: PreferencesKeys.supportInstallationTag)?.get(SupportInstallationTag.self) {
         return UInt64(bitPattern: stored.value)
@@ -104,29 +121,34 @@ func _internal_supportName(network: Network, postbox: Postbox) -> Signal<String,
     }
 }
 
-func _internal_refreshSupportUserInfo(account: Account, peerId: PeerId) -> Signal<Never, NoError> {
+func _internal_refreshSupportUserInfo(account: Account, peerId: PeerId) -> Signal<Never, RefreshSupportUserInfoError> {
     guard let supportContext = account.supportContext else {
-        return .complete()
+        return .fail(.generic)
     }
     return account.postbox.transaction { transaction -> Api.InputUser? in
         return transaction.getPeer(peerId).flatMap(apiInputUser)
     }
-    |> mapToSignal { inputUser -> Signal<Never, NoError> in
+    |> castError(RefreshSupportUserInfoError.self)
+    |> mapToSignal { inputUser -> Signal<Never, RefreshSupportUserInfoError> in
         guard let inputUser else {
-            return .complete()
+            return .fail(.generic)
         }
         return account.network.request(Api.functions.help.getUserInfo(userId: inputUser))
-        |> map(Optional.init)
-        |> `catch` { _ -> Signal<Api.help.UserInfo?, NoError> in
-            return .single(nil)
+        |> mapError { _ -> RefreshSupportUserInfoError in
+            return .generic
         }
-        |> mapToSignal { result -> Signal<Never, NoError> in
-            if let result {
-                supportContext.applyUserInfo(peerId: peerId, info: supportUserInfo(result))
-            }
+        |> mapToSignal { result -> Signal<Never, RefreshSupportUserInfoError> in
+            supportContext.applyUserInfo(peerId: peerId, info: supportUserInfo(result))
             return .complete()
         }
     }
+}
+
+func supportRefreshUserInfoBesideFullUser(account: Account, peerId: PeerId) {
+    guard account.supportContext != nil, peerId.namespace == Namespaces.Peer.CloudUser, peerId != account.peerId else {
+        return
+    }
+    let _ = _internal_refreshSupportUserInfo(account: account, peerId: peerId).start()
 }
 
 func _internal_saveSupportUserInfo(account: Account, peerId: PeerId, text: String, entities: [MessageTextEntity]) -> Signal<Never, SaveSupportUserInfoError> {

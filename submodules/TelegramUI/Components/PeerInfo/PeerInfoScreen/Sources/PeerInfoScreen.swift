@@ -764,6 +764,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     return
                 }
                 self.openNoteContextMenu(node: node, gesture: gesture)
+            }, openSupportInfoContextMenu: { [weak self] node, gesture in
+                guard let self else {
+                    return
+                }
+                self.openSupportInfoContextMenu(node: node, gesture: gesture)
+            }, editSupportInfo: { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.openSupportInfoEditor()
             }, openWorkingHoursContextMenu: { [weak self] node, gesture in
                 guard let self else {
                     return
@@ -2690,6 +2700,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     
     deinit {
         self.dataDisposable?.dispose()
+        self.supportInfoEditDisposable.dispose()
         self.walletStickersPreloadDisposable.dispose()
         self.hiddenMediaDisposable?.dispose()
         self.activeActionDisposable.dispose()
@@ -2785,6 +2796,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         pendingCompletion?()
     }
     
+    let supportInfoEditDisposable = MetaDisposable()
     private let walletStickersPreloadDisposable = MetaDisposable()
     private var preloadedWalletCard: WalletCard?
     private let shareThemePreloadDisposable = MetaDisposable()

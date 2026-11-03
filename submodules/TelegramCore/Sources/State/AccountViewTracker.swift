@@ -1812,6 +1812,7 @@ public final class AccountViewTracker {
                 return
             }
             let queue = self.queue
+            supportRefreshUserInfoBesideFullUser(account: account, peerId: peerId)
             context.disposable.set(combineLatest(fetchAndUpdateSupplementalCachedPeerData(peerId: peerId, accountPeerId: account.peerId, network: account.network, postbox: account.postbox), _internal_fetchAndUpdateCachedPeerData(accountPeerId: account.peerId, peerId: peerId, network: account.network, postbox: account.postbox)).start(next: { [weak self] supplementalStatus, cachedStatus in
                 queue.async {
                     guard let strongSelf = self else {
@@ -1854,6 +1855,7 @@ public final class AccountViewTracker {
                     return
                 }
                 let queue = self.queue
+                supportRefreshUserInfoBesideFullUser(account: account, peerId: peerId)
                 context.disposable.set(combineLatest(fetchAndUpdateSupplementalCachedPeerData(peerId: peerId, accountPeerId: accountPeerId, network: account.network, postbox: account.postbox), _internal_fetchAndUpdateCachedPeerData(accountPeerId: account.peerId, peerId: peerId, network: account.network, postbox: account.postbox)).start(next: { [weak self] supplementalStatus, cachedStatus in
                     queue.async {
                         guard let strongSelf = self else {

@@ -6,6 +6,18 @@ import TelegramApi
 @testable import TelegramCore
 
 final class SupportApiTests: XCTestCase {
+    private static let logger: Logger = {
+        let logger = Logger(rootPath: NSTemporaryDirectory(), basePath: NSTemporaryDirectory())
+        logger.logToFile = false
+        logger.logToConsole = false
+        return logger
+    }()
+
+    override func setUp() {
+        super.setUp()
+        Logger.setSharedLogger(SupportApiTests.logger)
+    }
+
     private let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1001))
     private let otherPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1002))
 
@@ -202,5 +214,33 @@ final class SupportApiTests: XCTestCase {
         }
 
         XCTAssertEqual(requestCount, 2)
+    }
+
+    func testLabelJoinsAuthorAndDate() {
+        XCTAssertEqual(supportUserInfoLabel(author: "agent", dateText: "today at 10:00"), "agent, today at 10:00")
+        XCTAssertEqual(supportUserInfoLabel(author: "", dateText: "today at 10:00"), "today at 10:00")
+    }
+
+    func testTitleWarnsOnlyForAnotherUserWithANote() {
+        let warning = supportChatTitleWarning(peerId: self.peerId, accountPeerId: self.otherPeerId, hasUserInfo: true)
+        XCTAssertEqual(warning, "\u{26A0}\u{FE0F} check info")
+        XCTAssertNil(supportChatTitleWarning(peerId: self.peerId, accountPeerId: self.otherPeerId, hasUserInfo: false))
+        XCTAssertNil(supportChatTitleWarning(peerId: self.peerId, accountPeerId: self.peerId, hasUserInfo: true))
+        let group = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(1003))
+        XCTAssertNil(supportChatTitleWarning(peerId: group, accountPeerId: self.otherPeerId, hasUserInfo: true))
+    }
+
+    func testSavedNoteDoesNotReachTheRequestLog() {
+        let function = Api.functions.help.editUserInfo(userId: .inputUserSelf, message: "made-up note", entities: [.messageEntityTextUrl(.init(offset: 0, length: 4, url: "https://example.com/made-up"))])
+        let description = apiFunctionDescription(of: function.0)
+        XCTAssertTrue(description.hasPrefix("help.editUserInfo("))
+        XCTAssertFalse(description.contains("made-up"))
+    }
+
+    func testFetchedNoteDoesNotReachTheResponseLog() {
+        let result = Api.help.UserInfo.userInfo(.init(message: "made-up note", entities: [.messageEntityTextUrl(.init(offset: 0, length: 4, url: "https://example.com/made-up"))], author: "made-up agent", date: 1000))
+        let description = BoxedMessage(result).description
+        XCTAssertTrue(description.hasPrefix("help.UserInfo.userInfo"))
+        XCTAssertFalse(description.contains("made-up"))
     }
 }

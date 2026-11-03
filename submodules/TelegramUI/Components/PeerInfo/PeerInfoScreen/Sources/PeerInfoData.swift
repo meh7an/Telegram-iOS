@@ -442,6 +442,7 @@ final class PeerInfoScreenData {
     let starsState: StarsContext.State?
     let tonState: StarsContext.State?
     let walletBalance: Int64?
+    let supportUserInfo: SupportUserInfo?
     let starsRevenueStatsState: StarsRevenueStats?
     let starsRevenueStatsContext: StarsRevenueStatsContext?
     let revenueStatsState: StarsRevenueStats?
@@ -517,7 +518,8 @@ final class PeerInfoScreenData {
         managedByBot: EnginePeer?,
         businessConnectedBot: EnginePeer?,
         sharedMediaPeer: EnginePeer? = nil,
-        walletBalance: Int64? = nil
+        walletBalance: Int64? = nil,
+        supportUserInfo: SupportUserInfo? = nil
     ) {
         self.peer = peer
         self.chatPeer = chatPeer
@@ -554,6 +556,7 @@ final class PeerInfoScreenData {
         self.starsState = starsState
         self.tonState = tonState
         self.walletBalance = walletBalance
+        self.supportUserInfo = supportUserInfo
         self.starsRevenueStatsState = starsRevenueStatsState
         self.starsRevenueStatsContext = starsRevenueStatsContext
         self.revenueStatsState = revenueStatsState
@@ -1588,10 +1591,10 @@ func peerInfoScreenData(
                 premiumGiftOptions,
                 webAppPermissions,
                 savedMusicContext.state,
-                combineLatest(businessConnectedBot, walletBalance)
+                combineLatest(businessConnectedBot, walletBalance, context.supportContext?.userInfo(peerId: userPeerId) ?? .single(nil))
             )
-            |> mapToSignal { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, hasStoryArchive, recommendedBots, accountIsPremium, savedMessagesPeer, hasSavedMessagesChats, hasSavedMessages, hasSavedMessageTags, hasBotPreviewItems, personalChannel, privacySettings, starsRevenueContextAndState, revenueContextAndState, premiumGiftOptions, webAppPermissions, savedMusicState, businessConnectedBotAndWalletBalance -> Signal<PeerInfoScreenData, NoError> in
-                let (businessConnectedBot, walletBalance) = businessConnectedBotAndWalletBalance
+            |> mapToSignal { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, hasStoryArchive, recommendedBots, accountIsPremium, savedMessagesPeer, hasSavedMessagesChats, hasSavedMessages, hasSavedMessageTags, hasBotPreviewItems, personalChannel, privacySettings, starsRevenueContextAndState, revenueContextAndState, premiumGiftOptions, webAppPermissions, savedMusicState, businessBotWalletAndSupportInfo -> Signal<PeerInfoScreenData, NoError> in
+                let (businessConnectedBot, walletBalance, supportUserInfo) = businessBotWalletAndSupportInfo
                 var availablePanes = availablePanes
                 if isMyProfile {
                     let showsOwnStories = context.supportContext == nil
@@ -1779,7 +1782,8 @@ func peerInfoScreenData(
                         managedByBot: managedByBot,
                         businessConnectedBot: businessConnectedBot,
                         sharedMediaPeer: sharedMediaPeer,
-                        walletBalance: walletBalance
+                        walletBalance: walletBalance,
+                        supportUserInfo: supportUserInfo
                     )
                 }
             }
