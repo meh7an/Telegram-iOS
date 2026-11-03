@@ -218,6 +218,10 @@ public extension TelegramEngine {
             return _internal_supportPeerId(account: self.account)
         }
         
+        public func supportCommonGroupsForModeration(userId: PeerId, currentChatId: PeerId) -> Signal<[EnginePeer], NoError> {
+            return _internal_supportCommonGroupsForModeration(account: self.account, userId: userId, currentChatId: currentChatId)
+        }
+        
         public func refreshSupportUserInfo(peerId: PeerId) -> Signal<Never, RefreshSupportUserInfoError> {
             return _internal_refreshSupportUserInfo(account: self.account, peerId: peerId)
         }

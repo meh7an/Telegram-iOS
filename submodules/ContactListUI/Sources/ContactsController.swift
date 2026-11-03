@@ -703,6 +703,18 @@ public class ContactsController: ViewController {
         self.present(actionSheet, in: .window(.root))
     }
     
+    private func openSupportAddedContact(peer: EnginePeer?) {
+        guard let navigationController = self.context.sharedContext.mainWindow?.viewController as? NavigationController else {
+            return
+        }
+        if let peer {
+            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer)))
+        } else {
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            (navigationController.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "This number is not on Telegram.", timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
+        }
+    }
+    
     @objc public func addPressed() {
         let _ = (DeviceAccess.authorizationStatus(subject: .contacts)
         |> take(1)
@@ -723,6 +735,10 @@ public class ContactsController: ViewController {
                             shareViaException: false,
                             completion: { [weak self] peer, stableId, contactData in
                                 guard let strongSelf = self else {
+                                    return
+                                }
+                                if strongSelf.context.supportContext != nil {
+                                    strongSelf.openSupportAddedContact(peer: peer)
                                     return
                                 }
                                 if let peer {

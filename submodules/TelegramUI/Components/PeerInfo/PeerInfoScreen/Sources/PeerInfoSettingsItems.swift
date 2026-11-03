@@ -298,7 +298,7 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
             interaction.openSettings(.premium)
         }))
     }
-    if let starsState = data.starsState {
+    if let starsState = data.starsState, context.supportContext == nil {
         if !isPremiumDisabled || abs(starsState.balance.value) > 0 {
             let balanceText: NSAttributedString
             if abs(starsState.balance.value) > 0 {
@@ -337,7 +337,7 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
             interaction.openSettings(.businessSetup)
         }))
     }
-    if let starsState = data.starsState {
+    if let starsState = data.starsState, context.supportContext == nil {
         if !isPremiumDisabled || starsState.balance > StarsAmount.zero {
             items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 105, label: .text(""), text: presentationData.strings.Settings_SendGift, icon: PresentationResourcesSettings.premiumGift, action: {
                 interaction.openSettings(.premiumGift)

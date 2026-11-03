@@ -4512,7 +4512,7 @@ func settingsSearchableItems(
                 guard let id = item.id as? String else {
                     return false
                 }
-                return id == "calls" || id.hasPrefix("calls/") || id == "notifications/new-contacts" || id.hasPrefix("privacy/passkey") || id == "saved-messages" || id == "edit/username" || id == "privacy/data-settings/delete-cloud-drafts" || id == "my-profile" || id.hasPrefix("my-profile/") || id == "edit" || (id.hasPrefix("edit/") && id != "edit/add-account" && id != "edit/log-out") || id.hasPrefix("profile-photo") || id == "emoji-status" || id == "profile-color" || id.hasPrefix("profile-color/") || id.hasPrefix("data/auto-download") || id.hasPrefix("notifications/in-app")
+                return id == "calls" || id.hasPrefix("calls/") || id == "notifications/new-contacts" || id.hasPrefix("privacy/passkey") || id == "saved-messages" || id == "edit/username" || id == "privacy/data-settings" || id.hasPrefix("privacy/data-settings/") || id == "my-profile" || id.hasPrefix("my-profile/") || id == "edit" || (id.hasPrefix("edit/") && id != "edit/add-account" && id != "edit/log-out") || id.hasPrefix("profile-photo") || id == "emoji-status" || id == "profile-color" || id.hasPrefix("profile-color/") || id.hasPrefix("data/auto-download") || id.hasPrefix("notifications/in-app") || id == "stars" || id.hasPrefix("stars/") || id == "send-gift" || id.hasPrefix("send-gift/") || id == "privacy/gifts" || id.hasPrefix("privacy/gifts/") || id == "business/do-not-hide-ads"
             })
         }
         

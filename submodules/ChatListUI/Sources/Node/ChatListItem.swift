@@ -3544,7 +3544,6 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 currentSecretIconImage = PresentationResourcesChatList.secretIcon(item.presentationData.theme)
             }
             
-            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
             var isAccountPeer = false
             if case let .chatList(index) = item.index, index.messageIndex.id.peerId == item.context.account.peerId {
                 isAccountPeer = true
@@ -3575,7 +3574,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 if let color = emojiStatus.color {
                                     currentStatusIconParticleColor = UIColor(rgb: UInt32(bitPattern: color))
                                 }
-                            } else if peer.showsPremiumStar && !premiumConfiguration.isPremiumDisabled {
+                            } else if peer.showsPremiumStar && item.context.premiumBadgesShown {
                                 currentCredibilityIconContent = .premium(color: item.presentationData.theme.list.itemAccentColor)
                             }
                             
@@ -3606,7 +3605,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if let color = emojiStatus.color {
                             currentStatusIconParticleColor = UIColor(rgb: UInt32(bitPattern: color))
                         }
-                    } else if peer.showsPremiumStar && !premiumConfiguration.isPremiumDisabled {
+                    } else if peer.showsPremiumStar && item.context.premiumBadgesShown {
                         currentCredibilityIconContent = .premium(color: item.presentationData.theme.list.itemAccentColor)
                     }
                     

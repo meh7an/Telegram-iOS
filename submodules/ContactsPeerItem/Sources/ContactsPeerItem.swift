@@ -861,8 +861,6 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 rightInset += icon.size.width + 12.0
             }
             
-            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
-            
             var credibilityStatusIcon: EmojiStatusComponent.Content?
             var verifiedIcon: EmojiStatusComponent.Content?
             var emojiStatusIcon: EmojiStatusComponent.Content?
@@ -880,7 +878,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         if let color = emojiStatus.color {
                             emojiStatusParticleColor = UIColor(rgb: UInt32(bitPattern: color))
                         }
-                    } else if peer.showsPremiumStar && !premiumConfiguration.isPremiumDisabled {
+                    } else if peer.showsPremiumStar && item.context.premiumBadgesShown {
                         credibilityStatusIcon = .premium(color: item.presentationData.theme.list.itemAccentColor)
                     }
                     
