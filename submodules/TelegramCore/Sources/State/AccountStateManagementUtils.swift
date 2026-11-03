@@ -5279,7 +5279,9 @@ func replayFinalState(
             case .UpdateRecentGifs:
                 syncRecentGifs = true
             case let .UpdateChatInputState(peerId, threadId, inputState):
-                _internal_updateChatInputState(transaction: transaction, peerId: peerId, threadId: threadId, inputState: inputState)
+                if !supportKeepsDraftLocal(transaction: transaction, accountPeerId: accountPeerId, threadId: threadId) {
+                    _internal_updateChatInputState(transaction: transaction, peerId: peerId, threadId: threadId, inputState: inputState)
+                }
             case let .UpdateCall(call):
                 updatedCalls.append(call)
             case let .AddCallSignalingData(callId, data):

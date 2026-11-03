@@ -15,6 +15,7 @@ func managedServiceViews(accountPeerId: PeerId, network: Network, postbox: Postb
             supportContext.setSupportName(name)
         }))
         disposable.add(managedSupportChatListCleanup(postbox: postbox, accountPeerId: accountPeerId, supportContext: supportContext).start())
+        disposable.add(managedSupportDraftSweep(postbox: postbox).start())
     }
     
     disposable.add((_internal_refreshSeenStories(postbox: postbox, network: network) |> then(.complete() |> suspendAwareDelay(5 * 60 * 60, queue: .mainQueue())) |> restart).start())

@@ -512,7 +512,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
 
                 let canHideNames = hasNotOwnMessages && hasOther
                 var hideNamesEnabled = true
-                if hasRichMessages && !context.isPremium {
+                if hasRichMessages && !context.isRichTextUnlocked {
                     hideNamesEnabled = false
                 }
                 

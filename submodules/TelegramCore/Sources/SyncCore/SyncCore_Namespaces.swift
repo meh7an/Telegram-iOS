@@ -355,6 +355,7 @@ private enum PreferencesKeyValues: Int32 {
     case unreadCounterTagsState = 51
     case supportSettings = 52
     case supportInstallationTag = 53
+    case supportDraftSweep = 54
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -391,6 +392,12 @@ public struct PreferencesKeys {
     public static let supportInstallationTag: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.supportInstallationTag.rawValue)
+        return key
+    }()
+    
+    public static let supportDraftSweep: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.supportDraftSweep.rawValue)
         return key
     }()
     

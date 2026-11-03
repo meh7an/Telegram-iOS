@@ -4510,7 +4510,7 @@ func settingsSearchableItems(
                 guard let id = item.id as? String else {
                     return false
                 }
-                return id == "calls" || id.hasPrefix("calls/") || id == "notifications/new-contacts" || id.hasPrefix("privacy/passkey") || id == "saved-messages" || id == "edit/username" || id == "my-profile" || id.hasPrefix("my-profile/")
+                return id == "calls" || id.hasPrefix("calls/") || id == "notifications/new-contacts" || id.hasPrefix("privacy/passkey") || id == "saved-messages" || id == "edit/username" || id == "privacy/data-settings/delete-cloud-drafts" || id == "my-profile" || id.hasPrefix("my-profile/")
             })
         }
         
