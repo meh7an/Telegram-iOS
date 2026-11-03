@@ -955,7 +955,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     if let color = emojiStatus.color {
                         credibilityParticleColor = UIColor(rgb: UInt32(bitPattern: color))
                     }
-                } else if item.peer.isPremium && !item.context.isPremiumDisabled {
+                } else if item.peer.showsPremiumStar && !item.context.isPremiumDisabled {
                     credibilityIcon = .premium(color: item.presentationData.theme.list.itemAccentColor)
                 }
                 

@@ -848,7 +848,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                 credibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
             } else if item.peer.isVerified {
                 credibilityIcon = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
-            } else if item.peer.isPremium && !premiumConfiguration.isPremiumDisabled {
+            } else if item.peer.showsPremiumStar && !premiumConfiguration.isPremiumDisabled {
                 credibilityIcon = .premium(color: item.presentationData.theme.list.itemAccentColor)
             }
             

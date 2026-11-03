@@ -880,7 +880,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         if let color = emojiStatus.color {
                             emojiStatusParticleColor = UIColor(rgb: UInt32(bitPattern: color))
                         }
-                    } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
+                    } else if peer.showsPremiumStar && !premiumConfiguration.isPremiumDisabled {
                         credibilityStatusIcon = .premium(color: item.presentationData.theme.list.itemAccentColor)
                     }
                     

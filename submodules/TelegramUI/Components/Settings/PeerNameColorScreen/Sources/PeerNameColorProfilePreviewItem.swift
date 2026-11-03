@@ -317,7 +317,7 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
                         credibilityIcon = .emojiStatus(emojiStatus)
                     } else if peer.isVerified {
                         credibilityIcon = .verified
-                    } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
+                    } else if peer.showsPremiumStar && !premiumConfiguration.isPremiumDisabled {
                         credibilityIcon = .premium
                     } else {
                         credibilityIcon = .none

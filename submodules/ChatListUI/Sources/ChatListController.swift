@@ -6943,7 +6943,7 @@ private final class ChatListLocationContext {
                 }
                 if let emojiStatus = user.emojiStatus {
                     return .emoji(emojiStatus)
-                } else if user.isPremium {
+                } else if user.showsPremiumStar {
                     return .premium
                 } else {
                     return nil

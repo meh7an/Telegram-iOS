@@ -441,7 +441,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                     credibilityIconOffset = 2.0
                 } else if peer.isVerified {
                     credibilityIconImage = PresentationResourcesItemList.verifiedPeerIcon(item.presentationData.theme)
-                } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
+                } else if peer.showsPremiumStar && !premiumConfiguration.isPremiumDisabled {
                     credibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
                 }
             }
