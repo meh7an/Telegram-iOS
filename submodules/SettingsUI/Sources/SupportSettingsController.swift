@@ -8,6 +8,11 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 import TelegramStringFormatting
+import AlertUI
+import LegacyMediaPickerUI
+import SupportTemplates
+import TranslateUI
+import UndoUI
 
 private let supportChatLoadPeriods: [(period: Int32, title: String)] = [
     (1 * 24 * 60 * 60, "1 day"),
@@ -26,10 +31,18 @@ private let supportSwitchBehaviors: [(behavior: SupportSwitchBehavior, title: St
 private final class SupportSettingsControllerArguments {
     let updateSettings: (@escaping (SupportSettings) -> SupportSettings) -> Void
     let loadMore: (Int32) -> Void
+    let importTemplates: () -> Void
+    let reloadTemplates: () -> Void
+    let setRevealedTemplateFile: (String?, String?) -> Void
+    let removeTemplateFile: (String) -> Void
 
-    init(updateSettings: @escaping (@escaping (SupportSettings) -> SupportSettings) -> Void, loadMore: @escaping (Int32) -> Void) {
+    init(updateSettings: @escaping (@escaping (SupportSettings) -> SupportSettings) -> Void, loadMore: @escaping (Int32) -> Void, importTemplates: @escaping () -> Void, reloadTemplates: @escaping () -> Void, setRevealedTemplateFile: @escaping (String?, String?) -> Void, removeTemplateFile: @escaping (String) -> Void) {
         self.updateSettings = updateSettings
         self.loadMore = loadMore
+        self.importTemplates = importTemplates
+        self.reloadTemplates = reloadTemplates
+        self.setRevealedTemplateFile = setRevealedTemplateFile
+        self.removeTemplateFile = removeTemplateFile
     }
 }
 
@@ -38,6 +51,7 @@ private enum SupportSettingsSection: Int32 {
     case sending
     case period
     case loading
+    case templates
 }
 
 private enum SupportSettingsEntry: ItemListNodeEntry {
@@ -50,6 +64,11 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         case periodInfo
         case loadMore
         case loadMoreInfo
+        case templatesHeader
+        case templatesImport
+        case templatesReload
+        case templatesFile(String)
+        case templatesInfo
     }
 
     case switchHeader(String)
@@ -60,6 +79,11 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
     case periodInfo(String)
     case loadMore(title: String, holeTimestamp: Int32?)
     case loadMoreInfo(String)
+    case templatesHeader(String)
+    case templatesImport(String)
+    case templatesReload(title: String, isEnabled: Bool)
+    case templatesFile(index: Int32, name: String, info: String, isRevealed: Bool)
+    case templatesInfo(String)
 
     var section: ItemListSectionId {
         switch self {
@@ -71,6 +95,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return SupportSettingsSection.period.rawValue
         case .loadMore, .loadMoreInfo:
             return SupportSettingsSection.loading.rawValue
+        case .templatesHeader, .templatesImport, .templatesReload, .templatesFile, .templatesInfo:
+            return SupportSettingsSection.templates.rawValue
         }
     }
 
@@ -92,6 +118,16 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return .loadMore
         case .loadMoreInfo:
             return .loadMoreInfo
+        case .templatesHeader:
+            return .templatesHeader
+        case .templatesImport:
+            return .templatesImport
+        case .templatesReload:
+            return .templatesReload
+        case let .templatesFile(_, name, _, _):
+            return .templatesFile(name)
+        case .templatesInfo:
+            return .templatesInfo
         }
     }
 
@@ -113,6 +149,16 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return 101
         case .loadMoreInfo:
             return 102
+        case .templatesHeader:
+            return 103
+        case .templatesImport:
+            return 104
+        case .templatesReload:
+            return 105
+        case let .templatesFile(index, _, _, _):
+            return 106 + index
+        case .templatesInfo:
+            return Int32.max
         }
     }
 
@@ -151,8 +197,27 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     return settings
                 }
             })
-        case let .periodInfo(text), let .loadMoreInfo(text):
+        case let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+        case let .templatesHeader(text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .templatesImport(title):
+            return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                arguments.importTemplates()
+            })
+        case let .templatesReload(title, isEnabled):
+            return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: title, kind: isEnabled ? .generic : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                if isEnabled {
+                    arguments.reloadTemplates()
+                }
+            })
+        case let .templatesFile(_, name, info, isRevealed):
+            return LocalizationListItem(presentationData: presentationData, systemStyle: .glass, id: name, title: name, subtitle: info, checked: false, activity: false, loading: false, editing: LocalizationListItemEditing(editable: true, editing: false, revealed: isRevealed, reorderable: false), sectionId: self.section, alwaysPlain: false, action: {
+            }, setItemWithRevealedOptions: { id, fromId in
+                arguments.setRevealedTemplateFile(id, fromId)
+            }, removeItem: { id in
+                arguments.removeTemplateFile(id)
+            })
         case let .loadMore(title, holeTimestamp):
             return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: title, kind: holeTimestamp != nil ? .generic : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 if let holeTimestamp {
@@ -163,7 +228,21 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
     }
 }
 
-private func supportSettingsEntries(presentationData: PresentationData, settings: SupportSettings, loadState: SupportChatListLoadState) -> [SupportSettingsEntry] {
+private func supportTemplatesStateSignal(manager: SupportTemplatesManager?) -> Signal<SupportTemplatesState?, NoError> {
+    guard let manager else {
+        return .single(nil)
+    }
+    return Signal { subscriber in
+        let token = manager.addStateObserver { state in
+            subscriber.putNext(state)
+        }
+        return ActionDisposable {
+            manager.removeStateObserver(token)
+        }
+    }
+}
+
+private func supportSettingsEntries(presentationData: PresentationData, settings: SupportSettings, loadState: SupportChatListLoadState, templates: SupportTemplatesState?, revealedTemplateFile: String?) -> [SupportSettingsEntry] {
     var entries: [SupportSettingsEntry] = []
 
     entries.append(.switchHeader("AFTER SENDING"))
@@ -190,14 +269,86 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
         entries.append(.loadMoreInfo("Chats are loaded back to \(date)."))
     }
 
+    if let templates {
+        entries.append(.templatesHeader("TEMPLATES"))
+        entries.append(.templatesImport("Import Template Files"))
+        entries.append(.templatesReload(title: templates.isReloading ? "Reloading..." : "Reload Templates", isEnabled: !templates.isReloading))
+        for (index, file) in templates.files.enumerated() {
+            var info = file.templateCount == 1 ? "1 template" : "\(file.templateCount) templates"
+            if file.hasUrl {
+                info += ", updates from its URL"
+            }
+            entries.append(.templatesFile(index: Int32(index), name: file.name, info: info, isRevealed: file.name == revealedTemplateFile))
+        }
+        if templates.errors.isEmpty {
+            entries.append(.templatesInfo("Import tl_*.txt files. A file with a {URL} updates from it at each launch and on reload, keeps your keys, and lists its changes in the Telegram chat."))
+        } else {
+            entries.append(.templatesInfo("Last reload:\n\n" + templates.errors.joined(separator: "\n\n")))
+        }
+    }
+
     return entries
 }
 
 public func supportSettingsController(context: AccountContext) -> ViewController {
+    var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
+
+    let showTemplatesResult: (SupportTemplatesReloadResult, String) -> Void = { result, successText in
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        var updated: String?
+        if !result.updatedFiles.isEmpty {
+            updated = "Updated: \(result.updatedFiles.joined(separator: ", ")). The changes are in the Telegram chat."
+        }
+        if result.errors.isEmpty {
+            let text = updated.flatMap { "\(successText) \($0)" } ?? successText
+            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: text, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in
+                return false
+            }), nil)
+        } else {
+            let text = (result.errors + (updated.flatMap { [$0] } ?? [])).joined(separator: "\n\n")
+            presentControllerImpl?(textAlertController(context: context, title: "Errors", text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+            })]), nil)
+        }
+    }
+
+    let revealedTemplateFile = Atomic<String?>(value: nil)
+    let revealedTemplateFilePromise = ValuePromise<String?>(nil, ignoreRepeated: true)
+
     let arguments = SupportSettingsControllerArguments(updateSettings: { f in
         let _ = updateSupportSettingsInteractively(engine: context.engine, f).startStandalone()
     }, loadMore: { holeTimestamp in
         context.supportContext?.loadMoreChats(holeTimestamp: holeTimestamp)
+    }, importTemplates: {
+        guard let manager = context.supportTemplates else {
+            return
+        }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        presentControllerImpl?(legacyICloudFilePicker(theme: presentationData.theme, mode: .import, hasMultiselection: true, documentTypes: ["public.plain-text"], completion: { urls in
+            if urls.isEmpty {
+                return
+            }
+            manager.importFiles(urls, completion: { result in
+                showTemplatesResult(result, "Templates imported.")
+            })
+        }), nil)
+    }, reloadTemplates: {
+        context.supportTemplates?.reload(completion: { result in
+            showTemplatesResult(result, "Templates reloaded!")
+        })
+    }, setRevealedTemplateFile: { id, fromId in
+        let updated = revealedTemplateFile.modify { current in
+            if (id == nil && fromId == current) || (id != nil && fromId == nil) {
+                return id
+            }
+            return current
+        }
+        revealedTemplateFilePromise.set(updated)
+    }, removeTemplateFile: { name in
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        presentControllerImpl?(textAlertController(context: context, title: nil, text: "Remove '\(name)' and its previous version from this device?", actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+        }), TextAlertAction(type: .destructiveAction, title: "Remove", action: {
+            context.supportTemplates?.removeFile(name: name)
+        })]), nil)
     })
 
     let settings = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.ApplicationSpecificPreference(key: PreferencesKeys.supportSettings))
@@ -208,14 +359,20 @@ public func supportSettingsController(context: AccountContext) -> ViewController
     let signal = combineLatest(queue: .mainQueue(),
         context.sharedContext.presentationData,
         settings,
-        context.engine.messages.supportChatListLoadState()
+        context.engine.messages.supportChatListLoadState(),
+        supportTemplatesStateSignal(manager: context.supportTemplates),
+        revealedTemplateFilePromise.get()
     )
-    |> map { presentationData, settings, loadState -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, settings, loadState, templates, revealedTemplateFile -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Support Settings"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: supportSettingsEntries(presentationData: presentationData, settings: settings, loadState: loadState), style: .blocks)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: supportSettingsEntries(presentationData: presentationData, settings: settings, loadState: loadState, templates: templates, revealedTemplateFile: revealedTemplateFile), style: .blocks)
 
         return (controllerState, (listState, arguments))
     }
 
-    return ItemListController(context: context, state: signal)
+    let controller = ItemListController(context: context, state: signal)
+    presentControllerImpl = { [weak controller] c, a in
+        controller?.present(c, in: .window(.root), with: a)
+    }
+    return controller
 }

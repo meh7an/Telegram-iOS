@@ -27,6 +27,7 @@ swift_library(
         "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
         "//submodules/WalletContext",
         "//submodules/LottieSettings:LottieSettings",
+        "//submodules/TelegramUI/Components/Support/SupportTemplates",
         "//submodules/TelegramCore/FlatBuffers",
         "//submodules/TelegramCore/FlatSerialization",
     ],

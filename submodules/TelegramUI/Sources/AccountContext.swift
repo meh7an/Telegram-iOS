@@ -31,6 +31,7 @@ import WalletContext
 import WalletConnectScreen
 import AlertUI
 import MetalEngine
+import SupportTemplates
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()
@@ -152,6 +153,7 @@ public final class AccountContextImpl: AccountContext {
     public let twoStepAuthData = Promise<TwoStepAuthData?>(nil)
     public let giftAuctionsManager: GiftAuctionsManager?
     public let supportContext: SupportContext?
+    public let supportTemplates: SupportTemplatesManager?
     private static var didOfferSupportModeRestart = false
     private var supportModeLostDisposable: Disposable?
     
@@ -323,6 +325,18 @@ public final class AccountContextImpl: AccountContext {
         self.account = account
         self.engine = TelegramEngine(account: account)
         self.supportContext = account.supportContext
+        if sharedContext.applicationBindings.isMainApp && !temp && account.supportContext != nil {
+            let engine = self.engine
+            let supportTemplates = SupportTemplatesManager(folderPath: account.basePath + "/TEMPLATES", fetch: supportTemplatesUrlSessionFetch(), notify: { texts in
+                let _ = engine.messages.addSupportLocalNotification(texts: texts).startStandalone()
+            }, log: { text in
+                Logger.shared.log("SupportTemplates", text)
+            })
+            supportTemplates.reload()
+            self.supportTemplates = supportTemplates
+        } else {
+            self.supportTemplates = nil
+        }
         
         self.imageCache = DirectMediaImageCache(account: account)
         

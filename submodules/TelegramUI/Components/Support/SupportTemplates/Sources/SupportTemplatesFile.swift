@@ -38,7 +38,7 @@ public func isSupportTemplatesFileName(_ name: String) -> Bool {
     return lowercased.hasPrefix("tl_") && lowercased.hasSuffix(".txt")
 }
 
-private enum ReadState {
+enum SupportTemplatesReadState {
     case none
     case question
     case keys
@@ -59,6 +59,48 @@ private func token(of line: [UInt16]) -> String? {
     return stringFromUnits(name)
 }
 
+func readSupportTemplatesLines(_ data: Data, stateChange: (SupportTemplatesReadState) -> Void, line: (SupportTemplatesReadState, String, Bool) -> Void) {
+    var state = SupportTemplatesReadState.none
+    var hadKeys = false
+    var hadValue = false
+    let blob = data.starts(with: [0xEF, 0xBB, 0xBF]) ? data.dropFirst(3) : data
+    for lineBytes in blob.split(separator: 0x0A, omittingEmptySubsequences: false) {
+        let units = Array(trimmedUnits(Array(String(decoding: lineBytes, as: UTF8.self).utf16)))
+        let text = stringFromUnits(units)
+        if let token = token(of: units) {
+            if state == .value {
+                hadKeys = false
+                hadValue = false
+            }
+            let newState: SupportTemplatesReadState
+            switch token {
+            case "VALUE":
+                newState = hadValue ? .none : .value
+            case "KEYS":
+                newState = hadKeys ? .none : .keys
+            case "QUESTION":
+                newState = .question
+            case "URL":
+                newState = .url
+            default:
+                newState = .none
+            }
+            stateChange(state)
+            state = newState
+            line(state, text, true)
+        } else {
+            if !units.isEmpty {
+                if state == .value {
+                    hadValue = true
+                } else if state == .keys {
+                    hadKeys = true
+                }
+            }
+            line(state, text, false)
+        }
+    }
+}
+
 public func parseSupportTemplatesFile(_ data: Data) -> SupportTemplatesFile {
     var result = SupportTemplatesFile()
     var url = ""
@@ -77,69 +119,40 @@ public func parseSupportTemplatesFile(_ data: Data) -> SupportTemplatesFile {
         question = SupportTemplatesQuestion()
     }
 
-    var state = ReadState.none
-    var hadKeys = false
-    var hadValue = false
-    for lineBytes in data.split(separator: 0x0A, omittingEmptySubsequences: false) {
-        let units = Array(trimmedUnits(Array(String(decoding: lineBytes, as: UTF8.self).utf16)))
-        let line = stringFromUnits(units)
-        if let token = token(of: units) {
-            if state == .value {
-                hadKeys = false
-                hadValue = false
-            }
-            let newState: ReadState
-            switch token {
-            case "VALUE":
-                newState = hadValue ? .none : .value
-            case "KEYS":
-                newState = hadKeys ? .none : .keys
-            case "QUESTION":
-                newState = .question
-            case "URL":
-                newState = .url
-            default:
-                newState = .none
-            }
-            if state == .value {
-                emit()
-            }
-            state = newState
-        } else {
-            if !units.isEmpty {
-                if state == .value {
-                    hadValue = true
-                } else if state == .keys {
-                    hadKeys = true
-                }
-            }
-            switch state {
-            case .keys:
-                if !units.isEmpty {
-                    question.originalKeys.append(line)
-                    let normalized = supportTemplatesNormalizedKey(line)
-                    if !normalized.isEmpty {
-                        question.normalizedKeys.append(normalized)
-                    }
-                }
-            case .value:
-                if !question.value.isEmpty {
-                    question.value += "\n"
-                }
-                question.value += line
-            case .question:
-                if question.question.isEmpty {
-                    question.question = line
-                }
-            case .url:
-                if url.isEmpty {
-                    url = line
-                }
-            case .none:
-                break
-            }
+    readSupportTemplatesLines(data, stateChange: { previous in
+        if previous == .value {
+            emit()
         }
-    }
+    }, line: { state, line, isStateChange in
+        if isStateChange {
+            return
+        }
+        switch state {
+        case .keys:
+            if !line.isEmpty {
+                question.originalKeys.append(line)
+                let normalized = supportTemplatesNormalizedKey(line)
+                if !normalized.isEmpty {
+                    question.normalizedKeys.append(normalized)
+                }
+            }
+        case .value:
+            if !question.value.isEmpty {
+                question.value += "\n"
+            }
+            question.value += line
+        case .question:
+            if question.question.isEmpty {
+                question.question = line
+            }
+        case .url:
+            if url.isEmpty {
+                url = line
+            }
+        case .none:
+            break
+        }
+    })
     emit()
     result.url = url
     return result
