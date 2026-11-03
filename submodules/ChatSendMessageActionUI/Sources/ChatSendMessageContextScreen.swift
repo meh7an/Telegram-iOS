@@ -553,6 +553,28 @@ final class ChatSendMessageContextScreenComponent: Component {
             }
             switch component.params {
             case let.sendMessage(sendMessage):
+                if sendMessage.canSendWithoutSwitching {
+                    items.append(.action(ContextMenuActionItem(
+                        id: AnyHashable("sendWithoutSwitching"),
+                        text: "Send without switching",
+                        icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, _ in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            self.animateOutToEmpty = true
+                            
+                            let sendParameters = ChatSendMessageActionSheetController.SendParameters(
+                                effect: self.selectedMessageEffect.flatMap({ ChatSendMessageActionSheetController.SendParameters.Effect(id: $0.id) }),
+                                textIsAboveMedia: self.mediaCaptionIsAbove
+                            )
+                            
+                            component.sendMessage(.generic, sendParameters)
+                            self.environment?.controller()?.dismiss()
+                        }
+                    )))
+                }
                 if !reminders {
                     items.append(.action(ContextMenuActionItem(
                         id: AnyHashable("silent"),

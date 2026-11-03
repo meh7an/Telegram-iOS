@@ -96,4 +96,29 @@ final class SupportReadStateTests: XCTestCase {
         XCTAssertFalse(readStateOperationTargetsDeletedUser(.ReadInbox(MessageId(peerId: self.userId, namespace: Namespaces.Message.Cloud, id: 3)), getPeer: { _ in named }))
         XCTAssertFalse(readStateOperationTargetsDeletedUser(.ReadInbox(MessageId(peerId: self.userId, namespace: Namespaces.Message.Cloud, id: 3)), getPeer: { _ in nil }))
     }
+
+    private func dividerBoundary(maxIncomingReadId: Int32, maxKnownId: Int32 = 9, count: Int32 = 0, markedUnread: Bool = false, top: Int32?) -> Int32? {
+        let state = PeerReadState.idBased(maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: 0, maxKnownId: maxKnownId, count: count, markedUnread: markedUnread)
+        return supportUnreadDividerBoundary(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, state)]), topMessageId: top)
+    }
+
+    func testUnreadChatKeepsTheDividerAfterItsReadMark() {
+        XCTAssertEqual(self.dividerBoundary(maxIncomingReadId: 7, count: 2, top: 9), 7)
+        XCTAssertEqual(self.dividerBoundary(maxIncomingReadId: 7, markedUnread: true, top: 9), 7)
+    }
+
+    func testReadChatPutsTheDividerAfterItsNewestMessage() {
+        XCTAssertEqual(self.dividerBoundary(maxIncomingReadId: 7, top: 9), 9)
+        XCTAssertEqual(self.dividerBoundary(maxIncomingReadId: 9, top: 7), 9)
+        XCTAssertEqual(self.dividerBoundary(maxIncomingReadId: 7, top: nil), 7)
+    }
+
+    func testChatKeepingNoReadStateNeverGetsADivider() {
+        XCTAssertEqual(self.dividerBoundary(maxIncomingReadId: 0, maxKnownId: Int32.max - 1, top: 9), Int32.max)
+    }
+
+    func testNoCloudReadStateFallsBackToTheStockDivider() {
+        XCTAssertNil(supportUnreadDividerBoundary(state: nil, topMessageId: 9))
+        XCTAssertNil(supportUnreadDividerBoundary(state: CombinedPeerReadState(states: []), topMessageId: 9))
+    }
 }

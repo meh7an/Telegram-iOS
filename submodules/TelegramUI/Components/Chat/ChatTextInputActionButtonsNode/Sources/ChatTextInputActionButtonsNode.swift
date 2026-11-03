@@ -586,6 +586,9 @@ public final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessag
         if !self.stopButtonIcon.alpha.isZero {
             self.accessibilityLabel = self.strings.VoiceOver_Chat_Stop
             self.accessibilityHint = nil
+        } else if !self.micButton.alpha.isZero && self.micButton.doneAction != nil {
+            self.accessibilityLabel = "Done, next chat"
+            self.accessibilityHint = nil
         } else if !self.micButton.alpha.isZero {
             switch self.micButton.mode {
                 case .audio:
