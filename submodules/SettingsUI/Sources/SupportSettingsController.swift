@@ -65,6 +65,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         case loadMore
         case loadMoreInfo
         case templatesHeader
+        case templatesAutocomplete
         case templatesImport
         case templatesReload
         case templatesFile(String)
@@ -80,6 +81,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
     case loadMore(title: String, holeTimestamp: Int32?)
     case loadMoreInfo(String)
     case templatesHeader(String)
+    case templatesAutocomplete(String, Bool)
     case templatesImport(String)
     case templatesReload(title: String, isEnabled: Bool)
     case templatesFile(index: Int32, name: String, info: String, isRevealed: Bool)
@@ -95,7 +97,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return SupportSettingsSection.period.rawValue
         case .loadMore, .loadMoreInfo:
             return SupportSettingsSection.loading.rawValue
-        case .templatesHeader, .templatesImport, .templatesReload, .templatesFile, .templatesInfo:
+        case .templatesHeader, .templatesAutocomplete, .templatesImport, .templatesReload, .templatesFile, .templatesInfo:
             return SupportSettingsSection.templates.rawValue
         }
     }
@@ -120,6 +122,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return .loadMoreInfo
         case .templatesHeader:
             return .templatesHeader
+        case .templatesAutocomplete:
+            return .templatesAutocomplete
         case .templatesImport:
             return .templatesImport
         case .templatesReload:
@@ -151,12 +155,14 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return 102
         case .templatesHeader:
             return 103
-        case .templatesImport:
+        case .templatesAutocomplete:
             return 104
-        case .templatesReload:
+        case .templatesImport:
             return 105
+        case .templatesReload:
+            return 106
         case let .templatesFile(index, _, _, _):
-            return 106 + index
+            return 107 + index
         case .templatesInfo:
             return Int32.max
         }
@@ -201,6 +207,14 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .templatesHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .templatesAutocomplete(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateSettings { settings in
+                    var settings = settings
+                    settings.templatesAutocomplete = value
+                    return settings
+                }
+            })
         case let .templatesImport(title):
             return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 arguments.importTemplates()
@@ -271,6 +285,7 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
 
     if let templates {
         entries.append(.templatesHeader("TEMPLATES"))
+        entries.append(.templatesAutocomplete("Enable templates autocomplete", settings.templatesAutocomplete))
         entries.append(.templatesImport("Import Template Files"))
         entries.append(.templatesReload(title: templates.isReloading ? "Reloading..." : "Reload Templates", isEnabled: !templates.isReloading))
         for (index, file) in templates.files.enumerated() {
@@ -281,7 +296,7 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
             entries.append(.templatesFile(index: Int32(index), name: file.name, info: info, isRevealed: file.name == revealedTemplateFile))
         }
         if templates.errors.isEmpty {
-            entries.append(.templatesInfo("Import tl_*.txt files. A file with a {URL} updates from it at each launch and on reload, keeps your keys, and lists its changes in the Telegram chat."))
+            entries.append(.templatesInfo("With autocomplete on, Tab and the composer button open the templates panel. With it off, they replace the key before the caret with its answer, and the button opens the panel if no key matches.\n\nImport tl_*.txt files. A file with a {URL} updates from it at each launch and on reload, keeps your keys, and lists its changes in the Telegram chat."))
         } else {
             entries.append(.templatesInfo("Last reload:\n\n" + templates.errors.joined(separator: "\n\n")))
         }
