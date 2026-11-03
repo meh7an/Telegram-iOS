@@ -14,6 +14,7 @@ func managedServiceViews(accountPeerId: PeerId, network: Network, postbox: Postb
         disposable.add(_internal_supportName(network: network, postbox: postbox).start(next: { name in
             supportContext.setSupportName(name)
         }))
+        disposable.add(managedSupportChatOrder(postbox: postbox, stateManager: stateManager, supportContext: supportContext).start())
         disposable.add(managedSupportChatListCleanup(postbox: postbox, accountPeerId: accountPeerId, supportContext: supportContext).start())
         disposable.add(managedSupportDraftSweep(postbox: postbox).start())
         disposable.add(managedSupportDeletedUserSweep(postbox: postbox, accountPeerId: accountPeerId).start())
