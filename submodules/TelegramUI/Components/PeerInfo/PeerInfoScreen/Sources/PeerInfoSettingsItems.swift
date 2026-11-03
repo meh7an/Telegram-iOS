@@ -358,9 +358,11 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
         }
     }
     
-    items[.support]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.Settings_Support, icon: PresentationResourcesSettings.support, action: {
-        interaction.openSettings(.support)
-    }))
+    if context.supportContext == nil {
+        items[.support]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.Settings_Support, icon: PresentationResourcesSettings.support, action: {
+            interaction.openSettings(.support)
+        }))
+    }
     items[.support]!.append(PeerInfoScreenDisclosureItem(id: 1, text: presentationData.strings.Settings_FAQ, icon: PresentationResourcesSettings.faq, action: {
         interaction.openSettings(.faq)
     }))

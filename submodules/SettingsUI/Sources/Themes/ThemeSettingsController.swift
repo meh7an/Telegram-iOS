@@ -411,7 +411,8 @@ private func themeSettingsControllerEntries(
     chatThemes: [PresentationThemeReference],
     animatedEmojiStickers: [String: [StickerPackItem]],
     accountPeer: EnginePeer?,
-    nameColors: PeerNameColors
+    nameColors: PeerNameColors,
+    isSupport: Bool
 ) -> [ThemeSettingsControllerEntry] {
     var entries: [ThemeSettingsControllerEntry] = []
     
@@ -447,7 +448,9 @@ private func themeSettingsControllerEntries(
         colors = collectibleColor.peerNameColors(dark: presentationData.theme.overallDarkAppearance)
     }
     let profileColors = profileColor.flatMap { nameColors.getProfile($0, dark: presentationData.theme.overallDarkAppearance, subject: .palette) }
-    entries.append(.nameColor(presentationData.theme, presentationData.strings.Settings_YourColor, accountPeer?.compactDisplayTitle ?? "", colors, profileColors))
+    if !isSupport {
+        entries.append(.nameColor(presentationData.theme, presentationData.strings.Settings_YourColor, accountPeer?.compactDisplayTitle ?? "", colors, profileColors))
+    }
     
     entries.append(.autoNight(presentationData.theme, strings.Appearance_NightTheme, presentationThemeSettings.automaticThemeSwitchSetting.force, !presentationData.autoNightModeTriggered || presentationThemeSettings.automaticThemeSwitchSetting.force))
     let autoNightMode: String
@@ -1150,7 +1153,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         chatThemes.insert(.builtin(.dayClassic), at: 0)
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeSettingsControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, chatSettings: chatSettings, mediaSettings: mediaSettings, themeReference: themeReference, availableThemes: availableThemes, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName, isPremium: isPremium, chatThemes: chatThemes, animatedEmojiStickers: animatedEmojiStickers, accountPeer: accountPeer, nameColors: context.peerNameColors), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeSettingsControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, chatSettings: chatSettings, mediaSettings: mediaSettings, themeReference: themeReference, availableThemes: availableThemes, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName, isPremium: isPremium, chatThemes: chatThemes, animatedEmojiStickers: animatedEmojiStickers, accountPeer: accountPeer, nameColors: context.peerNameColors, isSupport: context.supportContext != nil), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
