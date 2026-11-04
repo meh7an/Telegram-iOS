@@ -281,6 +281,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         if self.isNodeLoaded {
             let location = data as? ChatLocation
             self.chatListDisplayNode.effectiveContainerNode.updateSelectedChatLocation(data: self.supportNarrowListPeerId != nil ? nil : location, progress: progress, transition: transition)
+            if self.supportShowsListOnly, case let .peer(peerId)? = location, location != self.supportFollowedChatLocation {
+                self.chatListDisplayNode.effectiveContainerNode.currentItemNode.scrollToChatIfOutsideSafeZone(peerId: peerId)
+            }
             self.supportFollowedChatLocation = location
         }
     }
