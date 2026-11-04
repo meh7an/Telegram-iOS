@@ -8,6 +8,20 @@ public enum SupportSwitchBehavior: Int32 {
     case previous = 2
 }
 
+public enum SupportChatListBeside: Int32 {
+    case off = 0
+    case landscape = 1
+    case everywhere = 2
+}
+
+public func supportChatListBesideUsesSplitView(_ value: SupportChatListBeside, isLandscape: Bool) -> Bool {
+    return value == .everywhere || (value == .landscape && isLandscape)
+}
+
+public func supportChatListBesideNarrowsList(_ value: SupportChatListBeside, isLandscape: Bool) -> Bool {
+    return value == .everywhere && !isLandscape
+}
+
 public struct SupportSettings: Codable, Equatable {
     public static let allChatsLoadPeriod: Int32 = 0
 
@@ -23,8 +37,9 @@ public struct SupportSettings: Codable, Equatable {
     public var sendAllSilently: Bool
     public var automaticMediaDownload: Bool
     public var inAppNotifications: Bool
+    public var chatListBeside: SupportChatListBeside
 
-    public init(switchBehavior: SupportSwitchBehavior, fixChatsOrder: Bool, templatesAutocomplete: Bool, chatLoadPeriod: Int32, allSearchResults: Bool, sendAllSilently: Bool, automaticMediaDownload: Bool, inAppNotifications: Bool) {
+    public init(switchBehavior: SupportSwitchBehavior, fixChatsOrder: Bool, templatesAutocomplete: Bool, chatLoadPeriod: Int32, allSearchResults: Bool, sendAllSilently: Bool, automaticMediaDownload: Bool, inAppNotifications: Bool, chatListBeside: SupportChatListBeside = .off) {
         self.switchBehavior = switchBehavior
         self.fixChatsOrder = fixChatsOrder
         self.templatesAutocomplete = templatesAutocomplete
@@ -33,6 +48,7 @@ public struct SupportSettings: Codable, Equatable {
         self.sendAllSilently = sendAllSilently
         self.automaticMediaDownload = automaticMediaDownload
         self.inAppNotifications = inAppNotifications
+        self.chatListBeside = chatListBeside
     }
 
     public init(from decoder: Decoder) throws {
@@ -47,6 +63,7 @@ public struct SupportSettings: Codable, Equatable {
         self.sendAllSilently = try container.decodeIfPresent(Bool.self, forKey: "sendAllSilently") ?? defaults.sendAllSilently
         self.automaticMediaDownload = try container.decodeIfPresent(Bool.self, forKey: "automaticMediaDownload") ?? defaults.automaticMediaDownload
         self.inAppNotifications = try container.decodeIfPresent(Bool.self, forKey: "inAppNotifications") ?? defaults.inAppNotifications
+        self.chatListBeside = (try container.decodeIfPresent(Int32.self, forKey: "chatListBeside")).flatMap(SupportChatListBeside.init(rawValue:)) ?? defaults.chatListBeside
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -60,6 +77,7 @@ public struct SupportSettings: Codable, Equatable {
         try container.encode(self.sendAllSilently, forKey: "sendAllSilently")
         try container.encode(self.automaticMediaDownload, forKey: "automaticMediaDownload")
         try container.encode(self.inAppNotifications, forKey: "inAppNotifications")
+        try container.encode(self.chatListBeside.rawValue, forKey: "chatListBeside")
     }
 }
 

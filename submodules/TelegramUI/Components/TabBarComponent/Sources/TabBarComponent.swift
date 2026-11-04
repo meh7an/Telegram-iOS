@@ -361,6 +361,7 @@ public final class TabBarComponent: Component {
     /// Icons without labels, on either axis.
     public let isCompact: Bool
     public let maxItemLength: CGFloat?
+    public let hidesItems: Bool
     public let inlineItems: Bool
     
     public init(
@@ -375,6 +376,7 @@ public final class TabBarComponent: Component {
         axis: Axis,
         isCompact: Bool,
         maxItemLength: CGFloat? = nil,
+        hidesItems: Bool = false,
         inlineItems: Bool = false
     ) {
         self.theme = theme
@@ -388,6 +390,7 @@ public final class TabBarComponent: Component {
         self.axis = axis
         self.isCompact = isCompact
         self.maxItemLength = maxItemLength
+        self.hidesItems = hidesItems
         self.inlineItems = inlineItems
     }
     
@@ -423,6 +426,9 @@ public final class TabBarComponent: Component {
             return false
         }
         if lhs.maxItemLength != rhs.maxItemLength {
+            return false
+        }
+        if lhs.hidesItems != rhs.hidesItems {
             return false
         }
         if lhs.inlineItems != rhs.inlineItems {
@@ -643,6 +649,9 @@ public final class TabBarComponent: Component {
         }
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            if self.component?.hidesItems == true, let searchView = self.searchView, point.x < searchView.frame.minX {
+                return nil
+            }
             if self.component?.maxItemLength != nil, let searchView = self.searchView, point.x > self.contextGestureContainerView.frame.maxX, point.x < searchView.frame.minX {
                 return nil
             }
@@ -705,7 +714,7 @@ public final class TabBarComponent: Component {
             
             self.overrideUserInterfaceStyle = component.theme.overallDarkAppearance ? .dark : .light
 
-            let barHeight: CGFloat = (component.inlineItems ? tabBarCompactItemThickness : 56.0) + innerInset * 2.0
+            let barHeight: CGFloat = ((component.inlineItems || component.hidesItems) ? tabBarCompactItemThickness : 56.0) + innerInset * 2.0
 
             var unboundItemWidths: [CGFloat] = []
             var validIds: [AnyHashable] = []
@@ -878,6 +887,7 @@ public final class TabBarComponent: Component {
                 tabsFrame.origin.x = -component.outerInsets.left - tabsFrame.width
             }
 
+            self.contextGestureContainerView.isHidden = component.hidesItems
             transition.setFrame(view: self.contextGestureContainerView, frame: tabsFrame)
             transition.setFrame(view: self.liquidLensView, frame: CGRect(origin: CGPoint(), size: tabsSize))
             

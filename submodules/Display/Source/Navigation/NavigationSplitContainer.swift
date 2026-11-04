@@ -28,6 +28,7 @@ final class NavigationSplitContainer: ASDisplayNode {
     
     private(set) var masterControllers: [ViewController] = []
     private(set) var detailControllers: [ViewController] = []
+    private var masterWidthOverride: CGFloat?
     
     var canHaveKeyboardFocus: Bool = false {
         didSet {
@@ -91,7 +92,7 @@ final class NavigationSplitContainer: ASDisplayNode {
     }
 
     func scrollToTopProxyFrames(layout: ContainerViewLayout) -> (master: CGRect, detail: CGRect) {
-        let masterWidth = splitMasterWidth(containerSize: layout.size, division: layout.division)
+        let masterWidth = self.masterWidthOverride ?? splitMasterWidth(containerSize: layout.size, division: layout.division)
         let detailWidth = layout.size.width - masterWidth
         let scrollToTopHeight = max(layout.statusBarHeight ?? layout.safeInsets.top, 1.0)
         
@@ -101,8 +102,30 @@ final class NavigationSplitContainer: ASDisplayNode {
         )
     }
 
-    func update(layout: ContainerViewLayout, masterControllers: [ViewController], detailControllers: [ViewController], detailsPlaceholderNode: NavigationDetailsPlaceholderNode?, transition: ContainedViewLayoutTransition) {
-        let masterWidth = splitMasterWidth(containerSize: layout.size, division: layout.division)
+    func animateDetailIn(over previousContent: UIView) {
+        let duration: Double = 0.3
+        self.view.insertSubview(previousContent, aboveSubview: self.masterContainer.view)
+        previousContent.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false, completion: { [weak previousContent] _ in
+            previousContent?.removeFromSuperview()
+        })
+        self.detailContainer.layer.animatePosition(from: CGPoint(x: self.detailContainer.bounds.width, y: 0.0), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+    }
+    
+    func animateDetailOut(over nextContent: UIView) {
+        guard let snapshot = self.detailContainer.view.snapshotView(afterScreenUpdates: false) else {
+            return
+        }
+        snapshot.frame = self.detailContainer.frame
+        nextContent.addSubview(snapshot)
+        snapshot.layer.animatePosition(from: CGPoint(), to: CGPoint(x: snapshot.bounds.width, y: 0.0), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { [weak snapshot] _ in
+            snapshot?.removeFromSuperview()
+        })
+    }
+    
+    func update(layout: ContainerViewLayout, masterWidthOverride: CGFloat? = nil, masterControllers: [ViewController], detailControllers: [ViewController], detailsPlaceholderNode: NavigationDetailsPlaceholderNode?, transition: ContainedViewLayoutTransition) {
+        self.masterWidthOverride = masterWidthOverride
+        let masterWidth = masterWidthOverride ?? splitMasterWidth(containerSize: layout.size, division: layout.division)
+        let masterContentWidth = masterWidthOverride != nil ? max(masterWidth, 320.0) : masterWidth
         let detailWidth = layout.size.width - masterWidth
         
         transition.updateFrame(node: self.masterContainer, frame: CGRect(origin: CGPoint(), size: CGSize(width: masterWidth, height: layout.size.height)))
@@ -124,7 +147,8 @@ final class NavigationSplitContainer: ASDisplayNode {
         let masterReserved = reservedAreaForPane(corners: layout.reservedCorners, division: layout.division, paneFrame: CGRect(x: 0.0, y: 0.0, width: masterWidth, height: layout.size.height), containerSize: layout.size)
         let detailReserved = reservedAreaForPane(corners: layout.reservedCorners, division: layout.division, paneFrame: CGRect(x: masterWidth, y: 0.0, width: detailWidth, height: layout.size.height), containerSize: layout.size)
         
-        self.masterContainer.update(layout: ContainerViewLayout(size: CGSize(width: masterWidth, height: layout.size.height), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: masterSafeInsets, reservedCorners: masterReserved.corners, division: masterReserved.division, additionalInsets: UIEdgeInsets(), statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet), canBeClosed: false, controllers: masterControllers, transition: transition)
+        self.detailContainer.firstControllerPreviousItem = masterWidthOverride != nil ? masterControllers.last.flatMap { .item($0.navigationItem) } : nil
+        self.masterContainer.update(layout: ContainerViewLayout(size: CGSize(width: masterContentWidth, height: layout.size.height), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: masterSafeInsets, reservedCorners: masterReserved.corners, division: masterReserved.division, additionalInsets: UIEdgeInsets(), statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet), canBeClosed: false, controllers: masterControllers, transition: transition)
         self.detailContainer.update(layout: ContainerViewLayout(size: CGSize(width: detailWidth, height: layout.size.height), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: detailSafeInsets, reservedCorners: detailReserved.corners, division: detailReserved.division, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet), canBeClosed: true, controllers: detailControllers, transition: transition)
         
         var controllersUpdated = false

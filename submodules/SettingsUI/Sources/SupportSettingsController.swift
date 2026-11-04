@@ -28,6 +28,12 @@ private let supportSwitchBehaviors: [(behavior: SupportSwitchBehavior, title: St
     (.previous, "Send and switch to previous")
 ]
 
+private let supportChatListBesideOptions: [(value: SupportChatListBeside, title: String)] = [
+    (.off, "Off"),
+    (.landscape, "In landscape only"),
+    (.everywhere, "Everywhere")
+]
+
 private final class SupportSettingsControllerArguments {
     let updateSettings: (@escaping (SupportSettings) -> SupportSettings) -> Void
     let loadMore: (Int32) -> Void
@@ -51,6 +57,7 @@ private enum SupportSettingsSection: Int32 {
     case sending
     case order
     case quiet
+    case beside
     case period
     case loading
     case templates
@@ -66,6 +73,9 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         case automaticMediaDownload
         case inAppNotifications
         case quietInfo
+        case besideHeader
+        case beside(Int32)
+        case besideInfo
         case periodHeader
         case period(Int32)
         case periodInfo
@@ -87,6 +97,9 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
     case automaticMediaDownload(String, Bool)
     case inAppNotifications(String, Bool)
     case quietInfo(String)
+    case besideHeader(String)
+    case beside(index: Int32, value: SupportChatListBeside, title: String, isSelected: Bool)
+    case besideInfo(String)
     case periodHeader(String)
     case period(index: Int32, period: Int32, title: String, isSelected: Bool)
     case periodInfo(String)
@@ -109,6 +122,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return SupportSettingsSection.order.rawValue
         case .automaticMediaDownload, .inAppNotifications, .quietInfo:
             return SupportSettingsSection.quiet.rawValue
+        case .besideHeader, .beside, .besideInfo:
+            return SupportSettingsSection.beside.rawValue
         case .periodHeader, .period, .periodInfo:
             return SupportSettingsSection.period.rawValue
         case .loadMore, .loadMoreInfo:
@@ -136,6 +151,12 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return .inAppNotifications
         case .quietInfo:
             return .quietInfo
+        case .besideHeader:
+            return .besideHeader
+        case let .beside(_, value, _, _):
+            return .beside(value.rawValue)
+        case .besideInfo:
+            return .besideInfo
         case .periodHeader:
             return .periodHeader
         case let .period(_, period, _, _):
@@ -179,10 +200,16 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return 8
         case .quietInfo:
             return 9
-        case .periodHeader:
+        case .besideHeader:
             return 10
-        case let .period(index, _, _, _):
+        case let .beside(index, _, _, _):
             return 11 + index
+        case .besideInfo:
+            return 14
+        case .periodHeader:
+            return 15
+        case let .period(index, _, _, _):
+            return 16 + index
         case .periodInfo:
             return 100
         case .loadMore:
@@ -253,6 +280,16 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     return settings
                 }
             })
+        case let .besideHeader(text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .beside(_, value, title, isSelected):
+            return ItemListCheckboxItem(presentationData: presentationData, systemStyle: .glass, title: title, style: .left, checked: isSelected, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                arguments.updateSettings { settings in
+                    var settings = settings
+                    settings.chatListBeside = value
+                    return settings
+                }
+            })
         case let .periodHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .period(_, period, title, isSelected):
@@ -263,7 +300,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     return settings
                 }
             })
-        case let .fixChatsOrderInfo(text), let .quietInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
+        case let .fixChatsOrderInfo(text), let .quietInfo(text), let .besideInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .templatesHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
@@ -332,6 +369,12 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
     entries.append(.automaticMediaDownload("Auto-download media", settings.automaticMediaDownload))
     entries.append(.inAppNotifications("In-app notifications", settings.inAppNotifications))
     entries.append(.quietInfo("These apply to this account only. With auto-download off, media loads when you tap it. With notifications off, new messages play no sound and show no banner while the app is open."))
+
+    entries.append(.besideHeader("CHAT LIST BESIDE CHATS"))
+    for (index, option) in supportChatListBesideOptions.enumerated() {
+        entries.append(.beside(index: Int32(index), value: option.value, title: option.title, isSelected: option.value == settings.chatListBeside))
+    }
+    entries.append(.besideInfo("In landscape, the chat list stays on the left at full height with the open chat beside it. Everywhere also shows a column of chats beside the open chat in portrait, as forums show their topics."))
 
     entries.append(.periodHeader("LOAD CHATS FOR A PERIOD"))
     for (index, option) in supportChatLoadPeriods.enumerated() {

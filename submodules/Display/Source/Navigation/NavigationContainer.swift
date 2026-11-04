@@ -87,6 +87,16 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
     public private(set) var controllers: [ViewController] = []
     private var state: State = State(layout: nil, canBeClosed: nil, top: nil, transition: nil, pending: nil)
     
+    var firstControllerPreviousItem: NavigationPreviousAction? {
+        didSet {
+            if self.firstControllerPreviousItem != oldValue, self.state.canBeClosed == true, let firstController = self.controllers.first {
+                let previousItem = self.firstControllerPreviousItem ?? .close
+                firstController.transitionNavigationBar?.previousItem = previousItem
+                firstController.previousItem = previousItem
+            }
+        }
+    }
+    
     weak var minimizedContainer: MinimizedContainer?
     
     private var ignoreInputHeight: Bool = false
@@ -583,8 +593,9 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
             for i in 0 ..< controllers.count {
                 if i == 0 {
                     if canBeClosed {
-                        controllers[i].transitionNavigationBar?.previousItem = .close
-                        controllers[i].previousItem = .close
+                        let previousItem = self.firstControllerPreviousItem ?? .close
+                        controllers[i].transitionNavigationBar?.previousItem = previousItem
+                        controllers[i].previousItem = previousItem
                     } else {
                         controllers[i].transitionNavigationBar?.previousItem = nil
                         controllers[i].previousItem = nil

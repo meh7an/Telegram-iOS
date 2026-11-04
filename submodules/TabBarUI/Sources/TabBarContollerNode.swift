@@ -56,6 +56,7 @@ final class TabBarControllerNode: ASDisplayNode {
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     private let maxItemLength: CGFloat?
+    var hidesItems: Bool = false
     private let itemSelected: (Int, Bool, [ASDisplayNode]) -> Void
     private let itemHasDoubleTapAction: (Int) -> Bool
     private let itemDoubleTapped: (Int) -> Void
@@ -325,6 +326,7 @@ final class TabBarControllerNode: ASDisplayNode {
                 axis: sidePlacement == nil ? .horizontal : .vertical,
                 isCompact: tabBarIsCompact(layout: params.layout, sidePlacement: sidePlacement),
                 maxItemLength: self.maxItemLength,
+                hidesItems: self.hidesItems,
                 inlineItems: self.maxItemLength != nil && !tabBarIsCompact(layout: params.layout, sidePlacement: sidePlacement) && sidePlacement == nil && params.layout.size.width > params.layout.size.height
             )),
             environment: {},

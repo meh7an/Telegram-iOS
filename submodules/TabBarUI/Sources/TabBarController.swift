@@ -104,6 +104,20 @@ open class TabBarControllerImpl: ViewController, TabBarController {
     private var strings: PresentationStrings
     
     private let maxItemLength: CGFloat?
+    public var hidesTabBar: Bool = false {
+        didSet {
+            if self.isNodeLoaded {
+                self.tabBarControllerNode.tabBarHidden = self.hidesTabBar
+            }
+        }
+    }
+    public var hidesTabBarItems: Bool = false {
+        didSet {
+            if self.isNodeLoaded {
+                self.tabBarControllerNode.hidesItems = self.hidesTabBarItems
+            }
+        }
+    }
 
     public init(theme: PresentationTheme, strings: PresentationStrings, maxItemLength: CGFloat? = nil) {
         self.theme = theme

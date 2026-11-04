@@ -489,6 +489,18 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     private var isUpdatingContainers: Bool = false
     
+    open func rootContainerMetrics(for layout: ContainerViewLayout) -> LayoutMetrics {
+        return layout.metrics
+    }
+    
+    open func rootContainerMasterWidth(for layout: ContainerViewLayout) -> CGFloat? {
+        return nil
+    }
+    
+    open var animatesRootContainerChange: Bool {
+        return false
+    }
+    
     func updateContainersNonReentrant(transition: ContainedViewLayoutTransition) {
         if self.isUpdatingContainers {
             return
@@ -615,7 +627,8 @@ open class NavigationController: UINavigationController, ContainableController, 
             transition.updateFrame(node: globalOverlayContainerParent, frame: CGRect(origin: CGPoint(), size: layout.size))
         }
         
-        let navigationLayout = makeNavigationLayout(mode: self.mode, layout: layout, controllers: self._viewControllers)
+        let rootMetrics = self.rootContainerMetrics(for: layout)
+        let navigationLayout = makeNavigationLayout(mode: self.mode, layout: layout, rootMetrics: rootMetrics, controllers: self._viewControllers)
         
         var transition = transition
         var statusBarStyle: StatusBarStyle = .Ignore
@@ -1049,6 +1062,9 @@ open class NavigationController: UINavigationController, ContainableController, 
                     self.rootContainer = .flat(flatContainer)
                     flatContainer.frame = CGRect(origin: CGPoint(), size: layout.size)
                     flatContainer.update(layout: layout, canBeClosed: false, controllers: controllers, transition: .immediate)
+                    if self.animatesRootContainerChange, transition.isAnimated {
+                        splitContainer.animateDetailOut(over: flatContainer.view)
+                    }
                     splitContainer.clearDetailSelection()
                     splitContainer.removeFromSupernode()
                 }
@@ -1084,6 +1100,9 @@ open class NavigationController: UINavigationController, ContainableController, 
                 flatContainer.update(layout: updatedLayout, canBeClosed: false, controllers: controllers, transition: .immediate)
             }
         case let .split(masterControllers, detailControllers):
+            var splitLayout = layout
+            splitLayout.metrics = rootMetrics
+            let masterWidthOverride = self.rootContainerMasterWidth(for: layout)
             if let rootContainer = self.rootContainer {
                 switch rootContainer {
                 case let .flat(flatContainer):
@@ -1101,8 +1120,12 @@ open class NavigationController: UINavigationController, ContainableController, 
                     } else {
                         splitContainer.canHaveKeyboardFocus = false
                     }
+                    let flatSnapshot = (self.animatesRootContainerChange && transition.isAnimated) ? flatContainer.view.snapshotView(afterScreenUpdates: false) : nil
                     splitContainer.frame = CGRect(origin: CGPoint(), size: layout.size)
-                    splitContainer.update(layout: layout, masterControllers: masterControllers, detailControllers: detailControllers, detailsPlaceholderNode: self.detailsPlaceholderNode, transition: .immediate)
+                    splitContainer.update(layout: splitLayout, masterWidthOverride: masterWidthOverride, masterControllers: masterControllers, detailControllers: detailControllers, detailsPlaceholderNode: self.detailsPlaceholderNode, transition: .immediate)
+                    if let flatSnapshot {
+                        splitContainer.animateDetailIn(over: flatSnapshot)
+                    }
                     flatContainer.statusBarStyleUpdated = nil
                     flatContainer.removeFromSupernode()
                     
@@ -1117,7 +1140,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                         splitContainer.canHaveKeyboardFocus = false
                     }
                     transition.updateFrame(node: splitContainer, frame: CGRect(origin: CGPoint(), size: layout.size))
-                    splitContainer.update(layout: layout, masterControllers: masterControllers, detailControllers: detailControllers, detailsPlaceholderNode: self.detailsPlaceholderNode, transition: transition)
+                    splitContainer.update(layout: splitLayout, masterWidthOverride: masterWidthOverride, masterControllers: masterControllers, detailControllers: detailControllers, detailsPlaceholderNode: self.detailsPlaceholderNode, transition: transition)
                 }
             } else {
                 let splitContainer = NavigationSplitContainer(theme: self.theme, controllerRemoved: { [weak self] controller in
@@ -1135,7 +1158,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     splitContainer.canHaveKeyboardFocus = false
                 }
                 splitContainer.frame = CGRect(origin: CGPoint(), size: layout.size)
-                splitContainer.update(layout: layout, masterControllers: masterControllers, detailControllers: detailControllers, detailsPlaceholderNode: self.detailsPlaceholderNode, transition: .immediate)
+                splitContainer.update(layout: splitLayout, masterWidthOverride: masterWidthOverride, masterControllers: masterControllers, detailControllers: detailControllers, detailsPlaceholderNode: self.detailsPlaceholderNode, transition: .immediate)
             }
         }
         

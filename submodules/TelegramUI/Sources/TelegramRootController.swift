@@ -90,6 +90,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     
     private var applicationInFocusDisposable: Disposable?
     private var storyUploadEventsDisposable: Disposable?
+    private var supportChatListBesideDisposable: Disposable?
     
     override public var minimizedContainer: MinimizedContainer? {
         didSet {
@@ -137,6 +138,13 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                 moveStorySource(engine: self.context.engine, peerId: self.context.account.peerId, from: Int64(stableId), to: Int64(id))
             })
         }
+        
+        if let supportContext = context.supportContext {
+            self.supportChatListBesideDisposable = (supportContext.chatListBeside
+            |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
+                self?.requestLayout(transition: .immediate)
+            })
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -148,6 +156,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         self.presentationDataDisposable?.dispose()
         self.applicationInFocusDisposable?.dispose()
         self.storyUploadEventsDisposable?.dispose()
+        self.supportChatListBesideDisposable?.dispose()
     }
     
     public func getContactsController() -> ViewController? {
@@ -194,6 +203,44 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         }
     
         super.containerLayoutUpdated(layout, transition: transition)
+    }
+    
+    override public var animatesRootContainerChange: Bool {
+        return self.context.supportContext != nil
+    }
+    
+    override public func rootContainerMasterWidth(for layout: ContainerViewLayout) -> CGFloat? {
+        guard (self.chatListController as? ChatListControllerImpl)?.supportNarrowListPeerId != nil else {
+            return nil
+        }
+        return layout.safeInsets.left + 72.0
+    }
+    
+    override public func rootContainerMetrics(for layout: ContainerViewLayout) -> LayoutMetrics {
+        guard let supportContext = self.context.supportContext, case .compact = layout.metrics.widthClass else {
+            return layout.metrics
+        }
+        let isLandscape = layout.size.width > layout.size.height
+        let chatListBeside = supportContext.currentChatListBeside
+        var openChatPeerId: EnginePeer.Id?
+        if supportChatListBesideUsesSplitView(chatListBeside, isLandscape: isLandscape), self.rootTabController?.currentController === self.chatListController {
+            for controller in self.viewControllers.reversed() {
+                if let controller = controller as? ChatControllerImpl, let peerId = controller.chatLocation.peerId {
+                    openChatPeerId = peerId
+                    break
+                }
+            }
+        }
+        let showsListBesideChat = openChatPeerId != nil
+        let narrowsList = showsListBesideChat && supportChatListBesideNarrowsList(chatListBeside, isLandscape: isLandscape)
+        (self.rootTabController as? TabBarControllerImpl)?.hidesTabBarItems = showsListBesideChat && !narrowsList
+        (self.rootTabController as? TabBarControllerImpl)?.hidesTabBar = narrowsList
+        (self.chatListController as? ChatListControllerImpl)?.supportShowsListOnly = showsListBesideChat
+        (self.chatListController as? ChatListControllerImpl)?.supportNarrowListPeerId = narrowsList ? openChatPeerId : nil
+        if showsListBesideChat {
+            return LayoutMetrics(widthClass: .regular, heightClass: .regular, orientation: layout.metrics.orientation, windowSize: layout.metrics.windowSize)
+        }
+        return layout.metrics
     }
     
     public func addRootControllers(showCallsTab: Bool, showNewsTab: Bool) {

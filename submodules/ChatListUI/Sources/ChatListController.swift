@@ -173,7 +173,30 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private let isReorderingTabsValue = ValuePromise<Bool>(false)
     
     private(set) var tabContainerData: ([ChatListFilterTabEntry], Bool, Int32?)?
+    public var supportShowsListOnly: Bool = false
+    public var supportNarrowListPeerId: EnginePeer.Id? {
+        didSet {
+            guard self.supportNarrowListPeerId != oldValue, self.isNodeLoaded else {
+                return
+            }
+            if let peerId = self.supportNarrowListPeerId, let location = self.chatListDisplayNode.inlineStackContainerNode?.location, location != .forum(peerId: peerId) {
+                DispatchQueue.main.async { [weak self] in
+                    self?.setInlineChatList(location: nil, animated: false)
+                }
+            }
+            if oldValue != nil, self.supportNarrowListPeerId != nil {
+                self.chatListDisplayNode.supportNarrowListPeerUpdated()
+            } else {
+                self.chatListDisplayNode.effectiveContainerNode.updateSelectedChatLocation(data: self.supportNarrowListPeerId != nil ? nil : self.supportFollowedChatLocation, progress: 1.0, transition: .immediate)
+            }
+        }
+    }
+    private var supportFollowedChatLocation: ChatLocation?
+    
     var hasTabs: Bool {
+        if self.supportShowsListOnly {
+            return false
+        }
         if let tabContainerData = self.tabContainerData {
             let isEmpty = tabContainerData.0.count <= 1 || tabContainerData.1
             return !isEmpty
@@ -256,7 +279,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.isNodeLoaded {
-            self.chatListDisplayNode.effectiveContainerNode.updateSelectedChatLocation(data: data as? ChatLocation, progress: progress, transition: transition)
+            let location = data as? ChatLocation
+            self.chatListDisplayNode.effectiveContainerNode.updateSelectedChatLocation(data: self.supportNarrowListPeerId != nil ? nil : location, progress: progress, transition: transition)
+            self.supportFollowedChatLocation = location
         }
     }
     
@@ -1464,6 +1489,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     if openAsInlineForum, case let .channel(channel) = peer, channel.isForum, threadId == nil {
                         self.chatListDisplayNode.clearHighlightAnimated(true)
+                        if self.supportNarrowListPeerId != nil {
+                            navigationController.popToRoot(animated: true)
+                            if self.chatListDisplayNode.inlineStackContainerNode?.location != .forum(peerId: channel.id) {
+                                self.setInlineChatList(location: .forum(peerId: channel.id))
+                            }
+                            return
+                        }
                         if self.chatListDisplayNode.inlineStackContainerNode?.location == .forum(peerId: channel.id) {
                             self.setInlineChatList(location: nil)
                         } else {

@@ -38,6 +38,8 @@ public final class SupportContext {
     private let automaticMediaDownloadValue = Atomic<Bool>(value: false)
     private let automaticMediaDownloadPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let inAppNotificationsValue = Atomic<Bool>(value: false)
+    private let chatListBesideValue = Atomic<SupportChatListBeside>(value: .off)
+    private let chatListBesidePromise = ValuePromise<SupportChatListBeside>(.off, ignoreRepeated: true)
     private let supportNamePromise = ValuePromise<String>(ignoreRepeated: true)
     private let userInfoState = Atomic(value: UserInfoState())
     private let userInfoUpdated = ValuePipe<PeerId>()
@@ -134,6 +136,14 @@ public final class SupportContext {
         return self.inAppNotificationsValue.with { $0 }
     }
     
+    public var chatListBeside: Signal<SupportChatListBeside, NoError> {
+        return self.chatListBesidePromise.get()
+    }
+    
+    public var currentChatListBeside: SupportChatListBeside {
+        return self.chatListBesideValue.with { $0 }
+    }
+    
     init(settings: Signal<SupportSettings, NoError>) {
         self.settingsDisposable = (settings
         |> map { settings -> Int32 in
@@ -153,6 +163,8 @@ public final class SupportContext {
             }
             let _ = self.automaticMediaDownloadValue.swap(settings.automaticMediaDownload)
             let _ = self.inAppNotificationsValue.swap(settings.inAppNotifications)
+            let _ = self.chatListBesideValue.swap(settings.chatListBeside)
+            self.chatListBesidePromise.set(settings.chatListBeside)
             self.automaticMediaDownloadPromise.set(settings.automaticMediaDownload)
         })
     }

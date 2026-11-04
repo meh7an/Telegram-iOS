@@ -152,6 +152,11 @@ public final class SearchDisplayController {
         }
     }
     
+    public func updateIsContentHidden(_ isHidden: Bool) {
+        self.backgroundNode.isHidden = isHidden
+        self.contentNode.isHidden = isHidden
+    }
+    
     public func updatePresentationData(_ presentationData: PresentationData) {
         if !self.searchBarIsExternal {
             self.searchBar?.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: self.hasSeparator, inline: self.inline), presentationTheme: presentationData.theme, strings: presentationData.strings)
