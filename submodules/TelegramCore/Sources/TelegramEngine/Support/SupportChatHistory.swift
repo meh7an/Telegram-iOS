@@ -124,12 +124,13 @@ public enum SupportHardwareKey: Hashable {
     case reloadTemplates
     case composerReturn
     case escape
+    case openAbuseBot
 
     var quietGap: Double {
         switch self {
         case .chatHistory, .escape:
             return 0.25
-        case .toggleMuted, .reloadTemplates, .composerReturn:
+        case .toggleMuted, .reloadTemplates, .composerReturn, .openAbuseBot:
             return 0.8
         }
     }

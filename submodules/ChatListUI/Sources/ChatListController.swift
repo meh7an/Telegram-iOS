@@ -2981,6 +2981,16 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private weak var storyCameraTooltip: TooltipScreen?
     
+    private var supportListIsOnScreen: Bool {
+        guard let tabController = self.parent as? TabBarController else {
+            return false
+        }
+        if let layout = self.validLayout, case .regular = layout.metrics.widthClass {
+            return true
+        }
+        return (self.navigationController as? NavigationController)?.topViewController === tabController
+    }
+
     fileprivate func openSupportAbuseBot() {
         let controller = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: nil))
         self.present(controller, in: .window(.root))
@@ -4900,12 +4910,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         let toggleSearch: () -> Void = { [weak self] in
             if let strongSelf = self {
-                if strongSelf.context.supportContext != nil, let tabController = strongSelf.parent as? TabBarController {
-                    var isOnScreen = (strongSelf.navigationController as? NavigationController)?.topViewController === tabController
-                    if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
-                        isOnScreen = true
-                    }
-                    if isOnScreen {
+                if strongSelf.context.supportContext != nil, strongSelf.parent is TabBarController {
+                    if strongSelf.supportListIsOnScreen {
                         if strongSelf.displayNavigationBar {
                             strongSelf.tabBarActivateSearch()
                         } else {
@@ -5003,6 +5009,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }))
             supportShortcuts.append(KeyShortcut(title: "Show Current Chat in List", input: "L", modifiers: [.control, .shift], action: { [weak self] in
                 self?.chatListDisplayNode.effectiveContainerNode.currentItemNode.scrollToHighlightedChat()
+            }))
+            supportShortcuts.append(KeyShortcut(title: "Open Abuse Bot", input: "A", modifiers: [.control, .shift], action: { [weak self] in
+                guard let self, self.supportListIsOnScreen, self.context.supportContext?.allowsHardwarePress(of: .openAbuseBot) == true else {
+                    return
+                }
+                self.openSupportAbuseBot()
             }))
         }
 
