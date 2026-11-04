@@ -80,9 +80,9 @@ func supportChatListLoadTillAfterLoadMore(current: Int32, holeTimestamp: Int32, 
 
 func supportShowsServerSuggestion(_ suggestion: ServerProvidedSuggestion) -> Bool {
     switch suggestion {
-    case .validatePhoneNumber, .validatePassword, .setupPassword, .setupLoginEmail, .setupLoginEmailBlocking:
+    case .validatePassword, .setupPassword, .setupLoginEmail, .setupLoginEmailBlocking:
         return true
-    case .autoarchivePopular, .newcomerTicks, .upgradePremium, .annualPremium, .restorePremium, .xmasPremiumGift, .setupBirthday, .todayBirthdays, .gracePremium, .starsSubscriptionLowBalance, .setupPhoto, .setupPasskey, .walletFirstIncomingTransfer, .link:
+    case .validatePhoneNumber, .autoarchivePopular, .newcomerTicks, .upgradePremium, .annualPremium, .restorePremium, .xmasPremiumGift, .setupBirthday, .todayBirthdays, .gracePremium, .starsSubscriptionLowBalance, .setupPhoto, .setupPasskey, .walletFirstIncomingTransfer, .link:
         return false
     }
 }

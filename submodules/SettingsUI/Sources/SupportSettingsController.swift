@@ -343,7 +343,7 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
     case .allLoaded:
         break
     case .loading:
-        entries.append(.loadMore(title: "Loading...", holeTimestamp: nil))
+        entries.append(.loadMore(title: "Loading chats...", holeTimestamp: nil))
     case let .held(holeTimestamp):
         let date = stringForMediumDate(timestamp: holeTimestamp, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, withTime: false)
         entries.append(.loadMore(title: "Load more", holeTimestamp: holeTimestamp))

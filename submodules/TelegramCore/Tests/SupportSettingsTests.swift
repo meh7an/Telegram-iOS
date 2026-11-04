@@ -54,11 +54,11 @@ final class SupportSettingsTests: XCTestCase {
     }
 
     func testSupportKeepsOnlySecuritySuggestions() {
-        let shown: [ServerProvidedSuggestion] = [.validatePhoneNumber, .validatePassword, .setupPassword, .setupLoginEmail, .setupLoginEmailBlocking]
+        let shown: [ServerProvidedSuggestion] = [.validatePassword, .setupPassword, .setupLoginEmail, .setupLoginEmailBlocking]
         for suggestion in shown {
             XCTAssertTrue(supportShowsServerSuggestion(suggestion), suggestion.id)
         }
-        let hidden: [ServerProvidedSuggestion] = [.autoarchivePopular, .newcomerTicks, .upgradePremium, .annualPremium, .restorePremium, .xmasPremiumGift, .setupBirthday, .todayBirthdays, .gracePremium, .starsSubscriptionLowBalance, .setupPhoto, .setupPasskey, .walletFirstIncomingTransfer]
+        let hidden: [ServerProvidedSuggestion] = [.validatePhoneNumber, .autoarchivePopular, .newcomerTicks, .upgradePremium, .annualPremium, .restorePremium, .xmasPremiumGift, .setupBirthday, .todayBirthdays, .gracePremium, .starsSubscriptionLowBalance, .setupPhoto, .setupPasskey, .walletFirstIncomingTransfer]
         for suggestion in hidden {
             XCTAssertFalse(supportShowsServerSuggestion(suggestion), suggestion.id)
         }
