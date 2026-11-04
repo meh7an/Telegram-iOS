@@ -173,7 +173,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private let isReorderingTabsValue = ValuePromise<Bool>(false)
     
     private(set) var tabContainerData: ([ChatListFilterTabEntry], Bool, Int32?)?
-    public var supportShowsListOnly: Bool = false
+    public var supportShowsListOnly: Bool = false {
+        didSet {
+            if self.supportShowsListOnly != oldValue, self.isNodeLoaded {
+                self.chatListDisplayNode.effectiveContainerNode.supportKeepRowsOnNextInsetChange()
+            }
+        }
+    }
     public var supportNarrowListPeerId: EnginePeer.Id? {
         didSet {
             guard self.supportNarrowListPeerId != oldValue, self.isNodeLoaded else {

@@ -846,6 +846,12 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
         }
     }
     
+    func supportKeepRowsOnNextInsetChange() {
+        for (_, itemNode) in self.itemNodes {
+            itemNode.listNode.supportKeepsRowsOnNextInsetChange = true
+        }
+    }
+    
     func updateSelectedChatLocation(data: ChatLocation?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         for (_, itemNode) in self.itemNodes {
             itemNode.listNode.updateSelectedChatLocation(data, progress: progress, transition: transition)
