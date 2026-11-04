@@ -2165,7 +2165,13 @@ public final class ContextControllerImpl: ViewController, ContextController, Sta
         self.controllerNode.addRelativeContentOffset(offset, transition: transition)
     }
     
+    public var additionalKeyShortcuts: [KeyShortcut] = []
+    
     public var keyShortcuts: [KeyShortcut] {
+        return self.baseKeyShortcuts + self.additionalKeyShortcuts
+    }
+    
+    private var baseKeyShortcuts: [KeyShortcut] {
         return [
             KeyShortcut(
                 input: UIKeyCommand.inputEscape,

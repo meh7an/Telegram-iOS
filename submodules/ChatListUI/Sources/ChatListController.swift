@@ -198,6 +198,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
     }
     private var supportFollowedChatLocation: ChatLocation?
+    private var supportPreviewIsMoving: Bool = false
     
     var hasTabs: Bool {
         if self.supportShowsListOnly {
@@ -2028,6 +2029,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         
                         let contextController = makeContextController(context: strongSelf.context, presentationData: strongSelf.presentationData, source: source, items: chatContextMenuItems(context: strongSelf.context, peerId: peer.peerId, promoInfo: promoInfo, source: .chatList(filter: strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.chatListFilter), chatListController: strongSelf, joined: joined) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                         strongSelf.presentInGlobalOverlay(contextController)
+                        if location == nil {
+                            strongSelf.supportAddPreviewShortcuts(contextController: contextController, peerId: peer.peerId)
+                        }
                         
                         dismissPreviewingImpl = { [weak self, weak contextController] animateIn in
                             if let self, let contextController {
@@ -3818,6 +3822,58 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             completion()
         }
         return true
+    }
+    
+    private func supportAddPreviewShortcuts(contextController: ContextController, peerId: EnginePeer.Id) {
+        guard self.context.supportContext != nil, !self.previewing else {
+            return
+        }
+        contextController.additionalKeyShortcuts = [
+            KeyShortcut(input: UIKeyCommand.inputUpArrow, modifiers: [.alternate], wantsPriorityOverText: true, action: { [weak self, weak contextController] in
+                if let self, let contextController {
+                    self.supportMovePreview(contextController: contextController, peerId: peerId, downward: false)
+                }
+            }),
+            KeyShortcut(input: UIKeyCommand.inputDownArrow, modifiers: [.alternate], wantsPriorityOverText: true, action: { [weak self, weak contextController] in
+                if let self, let contextController {
+                    self.supportMovePreview(contextController: contextController, peerId: peerId, downward: true)
+                }
+            })
+        ]
+    }
+    
+    private func supportMovePreview(contextController: ContextController, peerId: EnginePeer.Id, downward: Bool) {
+        if self.supportPreviewIsMoving {
+            return
+        }
+        self.supportPreviewIsMoving = true
+        let accountPeerId = self.context.account.peerId
+        let listNode = self.chatListDisplayNode.mainContainerNode.currentItemNode
+        let _ = (self.context.engine.messages.supportChatListNeighbour(peerId: peerId, chatListFilterId: listNode.chatListFilter?.id, downward: downward, getFilterPredicate: { data in
+            return chatListFilterPredicate(filter: data, accountPeerId: accountPeerId)
+        })
+        |> deliverOnMainQueue).startStandalone(next: { [weak self, weak contextController, weak listNode] peer in
+            guard let self else {
+                return
+            }
+            self.supportPreviewIsMoving = false
+            guard let contextController, let listNode, let peer else {
+                return
+            }
+            listNode.scrollToChatIfOutsideSafeZone(peerId: peer.id)
+            var rowNode: ChatListItemNode?
+            listNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ChatListItemNode, case .peer(id: peer.id) = itemNode.item?.content.chatLocation {
+                    rowNode = itemNode
+                }
+            }
+            guard let rowNode else {
+                return
+            }
+            contextController.additionalKeyShortcuts = []
+            contextController.dismissWithoutContent()
+            rowNode.supportActivatePreview()
+        })
     }
     
     public func resetForumStackIfOpen() {

@@ -740,6 +740,7 @@ public protocol ContextController: ViewController, StandalonePresentableControll
     var reactionSelected: ((UpdateMessageReaction, Bool) -> Void)? { get set }
     var premiumReactionsSelected: (() -> Void)? { get set }
     var getOverlayViews: (() -> [UIView])? { get set }
+    var additionalKeyShortcuts: [KeyShortcut] { get set }
     
     func addRelativeContentOffset(_ offset: CGPoint, transition: ContainedViewLayoutTransition)
     func updateTheme(presentationData: PresentationData)
