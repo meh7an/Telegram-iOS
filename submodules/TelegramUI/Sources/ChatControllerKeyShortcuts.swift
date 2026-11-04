@@ -12,6 +12,7 @@ import Display
 import ChatPresentationInterfaceState
 import ChatControllerInteraction
 import ChatTextInputPanelNode
+import ChatListUI
 
 extension ChatControllerImpl {    
     var keyShortcutsInternal: [KeyShortcut] {
@@ -345,6 +346,24 @@ extension ChatControllerImpl {
             })
         ]
         
-        return inputShortcuts + otherShortcuts
+        var supportShortcuts: [KeyShortcut] = []
+        if self.context.supportContext != nil {
+            supportShortcuts.append(contentsOf: supportTemplatesReloadKeyShortcuts(context: self.context, present: { [weak self] controller in
+                self?.present(controller, in: .window(.root))
+            }))
+            supportShortcuts.append(KeyShortcut(title: "Mute or Unmute Chat", input: "M", modifiers: [.control, .shift], action: { [weak self] in
+                self?.supportToggleMuted()
+            }))
+            if self.supportOccupationPeerId != nil {
+                supportShortcuts.append(KeyShortcut(title: "Previous Opened Chat", input: "X", modifiers: [.control, .shift], action: { [weak self] in
+                    self?.supportMoveThroughChatHistory(steps: -1)
+                }))
+                supportShortcuts.append(KeyShortcut(title: "Next Opened Chat", input: "C", modifiers: [.control, .shift], action: { [weak self] in
+                    self?.supportMoveThroughChatHistory(steps: 1)
+                }))
+            }
+        }
+
+        return inputShortcuts + otherShortcuts + supportShortcuts
     }
 }

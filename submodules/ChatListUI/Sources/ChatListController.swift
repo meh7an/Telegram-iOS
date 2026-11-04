@@ -4900,7 +4900,19 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         let toggleSearch: () -> Void = { [weak self] in
             if let strongSelf = self {
-                if strongSelf.displayNavigationBar {
+                if strongSelf.context.supportContext != nil, let tabController = strongSelf.parent as? TabBarController {
+                    var isOnScreen = (strongSelf.navigationController as? NavigationController)?.topViewController === tabController
+                    if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
+                        isOnScreen = true
+                    }
+                    if isOnScreen {
+                        if strongSelf.displayNavigationBar {
+                            strongSelf.tabBarActivateSearch()
+                        } else {
+                            strongSelf.tabBarDeactivateSearch()
+                        }
+                    }
+                } else if strongSelf.displayNavigationBar {
                     strongSelf.activateSearch()
                 } else {
                     strongSelf.deactivateSearch(animated: true)
@@ -4984,7 +4996,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             })
         }
         
-        return inputShortcuts + folderShortcuts + chatShortcuts
+        var supportShortcuts: [KeyShortcut] = []
+        if self.context.supportContext != nil {
+            supportShortcuts.append(contentsOf: supportTemplatesReloadKeyShortcuts(context: self.context, present: { [weak self] controller in
+                self?.present(controller, in: .window(.root))
+            }))
+            supportShortcuts.append(KeyShortcut(title: "Show Current Chat in List", input: "L", modifiers: [.control, .shift], action: { [weak self] in
+                self?.chatListDisplayNode.effectiveContainerNode.currentItemNode.scrollToHighlightedChat()
+            }))
+        }
+
+        return inputShortcuts + folderShortcuts + chatShortcuts + supportShortcuts
     }
     
     override public func toolbarActionSelected(action: ToolbarActionOption) {

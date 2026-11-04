@@ -330,6 +330,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     }
     public var supportDoneAction: (() -> Void)?
     public var supportDoneIsAvailable: () -> Bool = { false }
+    public var supportHardwareReturnIsNewPress: (() -> Bool)?
     public var supportDoneChatIsUnread: Bool = false {
         didSet {
             if self.supportDoneChatIsUnread != oldValue {
@@ -4912,20 +4913,25 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     }
     
     public func chatInputTextNodeShouldReturn(modifierFlags: UIKeyModifierFlags) -> Bool {
+        let supportPressIsNew = self.supportHardwareReturnIsNewPress?() ?? false
+        let modifiersSend: Bool
+        if let context = self.context, context.sharedContext.currentChatSettings.with({ $0 }).sendWithCmdEnter {
+            modifiersSend = modifierFlags.contains(.command)
+        } else {
+            modifiersSend = modifierFlags.isEmpty
+        }
         var shouldSendMessage = false
         if self.sendActionButtons.sendButton.supernode != nil && !self.sendActionButtons.sendButton.isHidden && !self.sendActionButtons.sendContainerNode.alpha.isZero {
-            if let context = self.context, context.sharedContext.currentChatSettings.with({ $0 }).sendWithCmdEnter {
-                if modifierFlags.contains(.command) {
-                    shouldSendMessage = true
-                }
-            } else {
-                if modifierFlags.isEmpty {
-                    shouldSendMessage = true
-                }
-            }
+            shouldSendMessage = modifiersSend
         }
         if shouldSendMessage {
             self.sendButtonPressed()
+            return false
+        }
+        if modifiersSend, let doneAction = self.mediaActionButtons.micButton.doneAction, !self.mediaActionButtons.isHidden, !self.mediaActionButtons.alpha.isZero {
+            if supportPressIsNew {
+                doneAction()
+            }
             return false
         }
         

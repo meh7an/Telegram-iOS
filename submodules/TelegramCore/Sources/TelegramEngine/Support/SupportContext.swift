@@ -48,6 +48,8 @@ public final class SupportContext {
     private let occupationsPromise = ValuePromise<[PeerId: SupportOccupation]>([:], ignoreRepeated: true)
     private let chatOrderLaunchResortTaken = Atomic<Bool>(value: false)
     private let searchResults = Atomic<(owner: ObjectIdentifier, peerIds: [PeerId])?>(value: nil)
+    private let chatHistory = Atomic<SupportChatHistory>(value: SupportChatHistory())
+    private let hardwareKeyGate = Atomic<SupportHardwareKeyGate>(value: SupportHardwareKeyGate())
     
     func takeChatOrderLaunchResort() -> Bool {
         return !self.chatOrderLaunchResortTaken.swap(true)
@@ -68,6 +70,36 @@ public final class SupportContext {
         }
     }
     
+    public func pushChatHistory(peerId: PeerId) {
+        let _ = self.chatHistory.modify { current in
+            var current = current
+            current.push(peerId: peerId)
+            return current
+        }
+    }
+
+    public func chatHistoryTarget(steps: Int) -> PeerId? {
+        return self.chatHistory.with { $0.target(steps: steps) }
+    }
+
+    public func moveChatHistory(steps: Int) {
+        let _ = self.chatHistory.modify { current in
+            var current = current
+            current.move(steps: steps)
+            return current
+        }
+    }
+
+    public func allowsHardwarePress(of key: SupportHardwareKey) -> Bool {
+        var result = false
+        let _ = self.hardwareKeyGate.modify { current in
+            var current = current
+            result = current.allowsPress(of: key, at: CFAbsoluteTimeGetCurrent())
+            return current
+        }
+        return result
+    }
+
     public var supportName: Signal<String, NoError> {
         return self.supportNamePromise.get()
     }

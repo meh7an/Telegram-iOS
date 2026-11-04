@@ -12,7 +12,7 @@ import AlertUI
 import LegacyMediaPickerUI
 import SupportTemplates
 import TranslateUI
-import UndoUI
+import ChatListUI
 
 private let supportChatLoadPeriods: [(period: Int32, title: String)] = [
     (1 * 24 * 60 * 60, "1 day"),
@@ -376,21 +376,9 @@ public func supportSettingsController(context: AccountContext) -> ViewController
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
 
     let showTemplatesResult: (SupportTemplatesReloadResult, String) -> Void = { result, successText in
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        var updated: String?
-        if !result.updatedFiles.isEmpty {
-            updated = "Updated: \(result.updatedFiles.joined(separator: ", ")). The changes are in the Telegram chat."
-        }
-        if result.errors.isEmpty {
-            let text = updated.flatMap { "\(successText) \($0)" } ?? successText
-            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: text, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in
-                return false
-            }), nil)
-        } else {
-            let text = (result.errors + (updated.flatMap { [$0] } ?? [])).joined(separator: "\n\n")
-            presentControllerImpl?(textAlertController(context: context, title: "Errors", text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
-            })]), nil)
-        }
+        supportPresentTemplatesReloadResult(context: context, result: result, successText: successText, elevatedLayout: false, present: { controller in
+            presentControllerImpl?(controller, nil)
+        })
     }
 
     let revealedTemplateFile = Atomic<String?>(value: nil)

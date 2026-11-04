@@ -79,6 +79,30 @@ extension ChatControllerImpl {
         })
     }
 
+    func supportMoveThroughChatHistory(steps: Int) {
+        guard let supportContext = self.context.supportContext, self.supportOccupationPeerId != nil, self.canReadHistoryValue, supportContext.allowsHardwarePress(of: .chatHistory), let peerId = supportContext.chatHistoryTarget(steps: steps) else {
+            return
+        }
+        let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
+            guard let self, let peer, supportContext.chatHistoryTarget(steps: steps) == peerId else {
+                return
+            }
+            // Before the switch: the next chat pushes itself when it appears, and must find itself current.
+            supportContext.moveChatHistory(steps: steps)
+            if !self.supportSwitch(to: peer) {
+                supportContext.moveChatHistory(steps: -steps)
+            }
+        })
+    }
+
+    func supportToggleMuted() {
+        guard let supportContext = self.context.supportContext, case .standard(.default) = self.mode, self.canReadHistoryValue, supportContext.allowsHardwarePress(of: .toggleMuted) else {
+            return
+        }
+        self.interfaceInteraction?.togglePeerNotifications()
+    }
+
     func supportSwitchPreload(peerId: EnginePeer.Id) -> Disposable {
         let context = self.context
         let accountPeerId = context.account.peerId

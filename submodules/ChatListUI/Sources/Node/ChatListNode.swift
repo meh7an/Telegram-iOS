@@ -3817,6 +3817,19 @@ public final class ChatListNode: ListViewImpl {
         }
     }
     
+    public func scrollToHighlightedChat() {
+        guard case let .peer(peerId)? = self.interaction?.highlightedChatLocation?.location else {
+            return
+        }
+        let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.ChatListIndex(id: peerId))
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] index in
+            guard let self, let index else {
+                return
+            }
+            self.setChatListLocation(.scroll(index: index, sourceIndex: self.currentlyVisibleLatestChatListIndex() ?? .chatList(.absoluteLowerBound), scrollPosition: .center(.top), animated: true, filter: self.chatListFilter))
+        })
+    }
+
     private func setChatListLocation(_ location: ChatListNodeLocation) {
         self.currentLocation = location
         self.chatListLocation.set(location)
