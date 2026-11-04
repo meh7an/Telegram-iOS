@@ -793,6 +793,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         self.updateNavigationMetadata()
         
+        if self.context.supportContext != nil {
+            self.updateTabBarSearchState(ViewController.TabBarSearchState(isActive: false), transition: .immediate)
+        }
+        
         self.globalControlPanelsContextStateDisposable = (self.globalControlPanelsContext.state
         |> deliverOnMainQueue).startStrict(next: { [weak self] state in
             guard let self else {
@@ -4741,7 +4745,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
         
     private var previousSearchToggleTimestamp: Double?
-    func activateSearch(filter: ChatListSearchFilter = .chats, query: String? = nil, skipScrolling: Bool = false, searchContentNode: NavigationBarSearchContentNode?) {
+    func activateSearch(filter: ChatListSearchFilter = .chats, query: String? = nil, skipScrolling: Bool = false, searchContentNode: NavigationBarSearchContentNode?, isFromTabBar: Bool = false) {
         Task { @MainActor [weak self] in
             guard let self else {
                 return
@@ -4768,7 +4772,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 do {
                     let displaySearchFilters = true
                     
-                    if let filterContainerNodeAndActivate = await self.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode?.placeholderNode, displaySearchFilters: displaySearchFilters, hasDownloads: self.hasDownloads, initialFilter: filter, navigationController: self.navigationController as? NavigationController, searchBarIsExternal: false) {
+                    if let filterContainerNodeAndActivate = await self.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode?.placeholderNode, displaySearchFilters: displaySearchFilters, hasDownloads: self.hasDownloads, initialFilter: filter, navigationController: self.navigationController as? NavigationController, searchBarIsExternal: isFromTabBar) {
                         let activate = filterContainerNodeAndActivate
                         
                         activate(filter != .downloads)
@@ -4780,7 +4784,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)
                     self.setDisplayNavigationBar(false, transition: transition)
-                    (self.parent as? TabBarController)?.updateIsTabBarHidden(true, transition: transition)
+                    if isFromTabBar {
+                        self.updateTabBarSearchState(ViewController.TabBarSearchState(isActive: true), transition: transition)
+                        if let searchBarNode = self.currentTabBarSearchNode?() as? SearchBarNode {
+                            self.chatListDisplayNode.searchDisplayController?.setSearchBar(searchBarNode)
+                            searchBarNode.activate()
+                        }
+                    } else {
+                        (self.parent as? TabBarController)?.updateIsTabBarHidden(true, transition: transition)
+                    }
 
                     self.isSearchActive = true
                     if let navigationController = self.navigationController as? NavigationController {
@@ -4837,6 +4849,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         completion?()
         
+        if self.context.supportContext != nil {
+            self.updateTabBarSearchState(ViewController.TabBarSearchState(isActive: false), transition: transition)
+        }
         (self.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: transition)
         
         self.isSearchActive = false
@@ -6476,7 +6491,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
 
     override public func tabBarActivateSearch() {
-        self.activateSearch(filter: .chats, query: nil)
+        if self.context.supportContext != nil {
+            self.activateSearch(filter: .chats, query: nil, searchContentNode: nil, isFromTabBar: true)
+        } else {
+            self.activateSearch(filter: .chats, query: nil)
+        }
     }
 
     override public func tabBarDeactivateSearch() {
