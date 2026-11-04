@@ -361,6 +361,12 @@ extension ChatControllerImpl {
                 self?.supportEscape()
             }))
             if self.supportOccupationPeerId != nil {
+                supportShortcuts.append(KeyShortcut(input: UIKeyCommand.inputUpArrow, modifiers: [.alternate], wantsPriorityOverText: true, action: { [weak self] in
+                    self?.supportMoveThroughChatList(downward: false)
+                }))
+                supportShortcuts.append(KeyShortcut(input: UIKeyCommand.inputDownArrow, modifiers: [.alternate], wantsPriorityOverText: true, action: { [weak self] in
+                    self?.supportMoveThroughChatList(downward: true)
+                }))
                 supportShortcuts.append(KeyShortcut(title: "Previous Opened Chat", input: "X", modifiers: [.control, .shift], action: { [weak self] in
                     self?.supportMoveThroughChatHistory(steps: -1)
                 }))

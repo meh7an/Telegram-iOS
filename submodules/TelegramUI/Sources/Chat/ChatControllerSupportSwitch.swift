@@ -79,6 +79,22 @@ extension ChatControllerImpl {
         })
     }
 
+    func supportMoveThroughChatList(downward: Bool) {
+        guard let supportContext = self.context.supportContext, let peerId = self.supportOccupationPeerId, supportContext.allowsHardwarePress(of: .chatHistory) else {
+            return
+        }
+        let accountPeerId = self.context.account.peerId
+        let _ = (self.context.engine.messages.supportChatListNeighbour(peerId: peerId, chatListFilterId: self.currentChatListFilter, downward: downward, getFilterPredicate: { data in
+            return chatListFilterPredicate(filter: data, accountPeerId: accountPeerId)
+        })
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
+            guard let self, let peer else {
+                return
+            }
+            let _ = self.supportSwitch(to: peer)
+        })
+    }
+
     func supportSendAndStay() {
         guard let supportContext = self.context.supportContext, supportContext.allowsHardwarePress(of: .composerReturn) else {
             return
