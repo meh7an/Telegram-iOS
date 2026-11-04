@@ -324,7 +324,8 @@ final class TabBarControllerNode: ASDisplayNode {
                 outerInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: tabBarBottomInset, right: sideInset),
                 axis: sidePlacement == nil ? .horizontal : .vertical,
                 isCompact: tabBarIsCompact(layout: params.layout, sidePlacement: sidePlacement),
-                maxItemLength: self.maxItemLength
+                maxItemLength: self.maxItemLength,
+                inlineItems: self.maxItemLength != nil && !tabBarIsCompact(layout: params.layout, sidePlacement: sidePlacement) && sidePlacement == nil && params.layout.size.width > params.layout.size.height
             )),
             environment: {},
             containerSize: sidePlacement?.frame.size ?? CGSize(width: params.layout.size.width - sideInset * 2.0, height: 100.0)

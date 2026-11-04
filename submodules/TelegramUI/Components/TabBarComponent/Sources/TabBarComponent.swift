@@ -361,6 +361,7 @@ public final class TabBarComponent: Component {
     /// Icons without labels, on either axis.
     public let isCompact: Bool
     public let maxItemLength: CGFloat?
+    public let inlineItems: Bool
     
     public init(
         theme: PresentationTheme,
@@ -373,7 +374,8 @@ public final class TabBarComponent: Component {
         outerInsets: UIEdgeInsets,
         axis: Axis,
         isCompact: Bool,
-        maxItemLength: CGFloat? = nil
+        maxItemLength: CGFloat? = nil,
+        inlineItems: Bool = false
     ) {
         self.theme = theme
         self.tintSelectedItem = tintSelectedItem
@@ -386,6 +388,7 @@ public final class TabBarComponent: Component {
         self.axis = axis
         self.isCompact = isCompact
         self.maxItemLength = maxItemLength
+        self.inlineItems = inlineItems
     }
     
     public static func ==(lhs: TabBarComponent, rhs: TabBarComponent) -> Bool {
@@ -420,6 +423,9 @@ public final class TabBarComponent: Component {
             return false
         }
         if lhs.maxItemLength != rhs.maxItemLength {
+            return false
+        }
+        if lhs.inlineItems != rhs.inlineItems {
             return false
         }
         return true
@@ -686,7 +692,7 @@ public final class TabBarComponent: Component {
             // A new axis or mode is applied without animation, so the capsule does not morph through
             // intermediate shapes.
             var transition = transition
-            if let previousComponent, previousComponent.axis != component.axis || previousComponent.isCompact != component.isCompact {
+            if let previousComponent, previousComponent.axis != component.axis || previousComponent.isCompact != component.isCompact || previousComponent.inlineItems != component.inlineItems {
                 transition = .immediate
             }
             // Search is laid out on the horizontal axis only.
@@ -699,7 +705,7 @@ public final class TabBarComponent: Component {
             
             self.overrideUserInterfaceStyle = component.theme.overallDarkAppearance ? .dark : .light
 
-            let barHeight: CGFloat = 56.0 + innerInset * 2.0
+            let barHeight: CGFloat = (component.inlineItems ? tabBarCompactItemThickness : 56.0) + innerInset * 2.0
 
             var unboundItemWidths: [CGFloat] = []
             var validIds: [AnyHashable] = []
@@ -722,6 +728,7 @@ public final class TabBarComponent: Component {
                         theme: component.theme,
                         isSearchActive: false,
                         showsTitle: true,
+                        inlineTitle: component.inlineItems,
                         isSelected: false,
                         tintSelectedItem: true,
                         isUnconstrained: true
@@ -736,7 +743,7 @@ public final class TabBarComponent: Component {
             if search != nil {
                 availableLength -= barHeight + 8.0
             }
-            let itemsLayout = tabBarItemsLayout(axis: component.axis, isCompact: component.isCompact, unboundItemWidths: unboundItemWidths, availableLength: availableLength, maxItemLength: component.maxItemLength)
+            let itemsLayout = tabBarItemsLayout(axis: component.axis, isCompact: component.isCompact, unboundItemWidths: unboundItemWidths, availableLength: availableLength, maxItemLength: component.maxItemLength, inlineItems: component.inlineItems)
             let tabsSize = itemsLayout.size
 
             var selectedItemFrame: CGRect?
@@ -779,6 +786,7 @@ public final class TabBarComponent: Component {
                         theme: component.theme,
                         isSearchActive: search?.isActive == true,
                         showsTitle: !component.isCompact,
+                        inlineTitle: component.inlineItems,
                         isSelected: false,
                         tintSelectedItem: component.tintSelectedItem,
                         isUnconstrained: false
@@ -793,6 +801,7 @@ public final class TabBarComponent: Component {
                         theme: component.theme,
                         isSearchActive: search?.isActive == true,
                         showsTitle: !component.isCompact,
+                        inlineTitle: component.inlineItems,
                         isSelected: true,
                         tintSelectedItem: component.tintSelectedItem,
                         isUnconstrained: false
@@ -899,12 +908,13 @@ public final class TabBarComponent: Component {
                     searchFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - searchSize.height), size: searchSize)
                 } else {
                     searchSize = CGSize(width: barHeight, height: barHeight)
-                    if component.maxItemLength != nil {
+                    if component.maxItemLength != nil && !component.inlineItems {
                         size.width = availableSize.width
                     } else {
                         size.width += barHeight + 8.0
                     }
-                    searchFrame = CGRect(origin: CGPoint(x: availableSize.width - searchSize.width, y: 0.0), size: searchSize)
+                    let searchX = component.inlineItems ? size.width - searchSize.width : availableSize.width - searchSize.width
+                    searchFrame = CGRect(origin: CGPoint(x: searchX, y: 0.0), size: searchSize)
                 }
 
                 let searchView: NavigationSearchView
@@ -966,15 +976,17 @@ private final class ItemComponent: Component {
     let theme: PresentationTheme
     let isSearchActive: Bool
     let showsTitle: Bool
+    let inlineTitle: Bool
     let isSelected: Bool
     let tintSelectedItem: Bool
     let isUnconstrained: Bool
     
-    init(item: TabBarComponent.Item, theme: PresentationTheme, isSearchActive: Bool, showsTitle: Bool, isSelected: Bool, tintSelectedItem: Bool, isUnconstrained: Bool) {
+    init(item: TabBarComponent.Item, theme: PresentationTheme, isSearchActive: Bool, showsTitle: Bool, inlineTitle: Bool, isSelected: Bool, tintSelectedItem: Bool, isUnconstrained: Bool) {
         self.item = item
         self.theme = theme
         self.isSearchActive = isSearchActive
         self.showsTitle = showsTitle
+        self.inlineTitle = inlineTitle
         self.isSelected = isSelected
         self.tintSelectedItem = tintSelectedItem
         self.isUnconstrained = isUnconstrained
@@ -991,6 +1003,9 @@ private final class ItemComponent: Component {
             return false
         }
         if lhs.showsTitle != rhs.showsTitle {
+            return false
+        }
+        if lhs.inlineTitle != rhs.inlineTitle {
             return false
         }
         if lhs.isSelected != rhs.isSelected {
@@ -1116,10 +1131,20 @@ private final class ItemComponent: Component {
             let title: String
             let badgeValue: String?
 
+            // An inline title sits beside the icon, so the icon keeps a fixed center near the leading edge.
+            let isIconBesideTitle = component.inlineTitle && !component.isSearchActive
+            let iconCenterX: CGFloat = isIconBesideTitle ? 27.0 : floor(availableSize.width / 2.0)
+            func iconX(width: CGFloat) -> CGFloat {
+                if isIconBesideTitle {
+                    return floor(iconCenterX - width * 0.5)
+                }
+                return floor((availableSize.width - width) * 0.5)
+            }
+
             // Compact items have no title, so the icon is centered; the badge moves with it.
             var badgeOffsetY: CGFloat = 0.0
             func iconY(regular: CGFloat, height: CGFloat) -> CGFloat {
-                if component.showsTitle {
+                if component.showsTitle && !component.inlineTitle {
                     return regular
                 }
                 let y = floor((availableSize.height - height) * 0.5)
@@ -1166,7 +1191,7 @@ private final class ItemComponent: Component {
                         environment: {},
                         containerSize: CGSize(width: floor(48.0 * animationScale), height: floor(48.0 * animationScale))
                     )
-                    let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: iconY(regular: -4.0, height: iconSize.height)), size: iconSize).offsetBy(dx: tabBarItem.animationOffset.x, dy: tabBarItem.animationOffset.y)
+                    let iconFrame = CGRect(origin: CGPoint(x: iconX(width: iconSize.width), y: iconY(regular: -4.0, height: iconSize.height)), size: iconSize).offsetBy(dx: tabBarItem.animationOffset.x, dy: tabBarItem.animationOffset.y)
                     if let animationIconView = animationIcon.view {
                         if animationIconView.superview == nil {
                             if let badgeView = self.badge?.view {
@@ -1204,7 +1229,7 @@ private final class ItemComponent: Component {
                         environment: {},
                         containerSize: CGSize(width: 100.0, height: 100.0)
                     )
-                    let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: iconY(regular: 3.0, height: iconSize.height)), size: iconSize)
+                    let iconFrame = CGRect(origin: CGPoint(x: iconX(width: iconSize.width), y: iconY(regular: 3.0, height: iconSize.height)), size: iconSize)
                     if let imageIconView = imageIcon.view {
                         if imageIconView.superview == nil {
                             if let badgeView = self.badge?.view {
@@ -1253,7 +1278,7 @@ private final class ItemComponent: Component {
                         environment: {},
                         containerSize: CGSize(width: 48.0, height: 48.0)
                     )
-                    let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: iconY(regular: -4.0, height: iconSize.height)), size: iconSize).offsetBy(dx: offset.x, dy: offset.y)
+                    let iconFrame = CGRect(origin: CGPoint(x: iconX(width: iconSize.width), y: iconY(regular: -4.0, height: iconSize.height)), size: iconSize).offsetBy(dx: offset.x, dy: offset.y)
                     if let animationIconView = animationIcon.view {
                         if animationIconView.superview == nil {
                             if let badgeView = self.badge?.view {
@@ -1289,7 +1314,7 @@ private final class ItemComponent: Component {
                         environment: {},
                         containerSize: CGSize(width: 100.0, height: 100.0)
                     )
-                    let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: iconY(regular: 8.0, height: iconSize.height)), size: iconSize)
+                    let iconFrame = CGRect(origin: CGPoint(x: iconX(width: iconSize.width), y: iconY(regular: 8.0, height: iconSize.height)), size: iconSize)
                     if let imageIconView = imageIcon.view {
                         if imageIconView.superview == nil {
                             if let badgeView = self.badge?.view {
@@ -1303,15 +1328,21 @@ private final class ItemComponent: Component {
                 }
             }
 
+            let inlineTitleX: CGFloat = 46.0
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: title, font: Font.semibold(10.0), textColor: (component.isSelected && component.tintSelectedItem) ? component.theme.rootController.tabBar.selectedTextColor : component.theme.rootController.tabBar.textColor))
+                    text: .plain(NSAttributedString(string: title, font: Font.semibold(component.inlineTitle ? 13.0 : 10.0), textColor: (component.isSelected && component.tintSelectedItem) ? component.theme.rootController.tabBar.selectedTextColor : component.theme.rootController.tabBar.textColor))
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width, height: 100.0)
+                containerSize: CGSize(width: component.inlineTitle ? max(1.0, availableSize.width - inlineTitleX) : availableSize.width, height: 100.0)
             )
-            let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: availableSize.height - 8.0 - titleSize.height), size: titleSize)
+            let titleFrame: CGRect
+            if component.inlineTitle {
+                titleFrame = CGRect(origin: CGPoint(x: inlineTitleX, y: floor((availableSize.height - titleSize.height) * 0.5)), size: titleSize)
+            } else {
+                titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: availableSize.height - 8.0 - titleSize.height), size: titleSize)
+            }
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     self.contextContainerView.contentView.addSubview(titleView)
@@ -1343,7 +1374,7 @@ private final class ItemComponent: Component {
                     containerSize: CGSize(width: 100.0, height: 100.0)
                 )
                 let contentWidth: CGFloat = 25.0
-                let badgeFrame = CGRect(origin: CGPoint(x: floor(availableSize.width / 2.0) + contentWidth - badgeSize.width - 1.0, y: 5.0 + badgeOffsetY), size: badgeSize)
+                let badgeFrame = CGRect(origin: CGPoint(x: iconCenterX + contentWidth - badgeSize.width - 1.0, y: 5.0 + badgeOffsetY), size: badgeSize)
                 if let badgeView = badge.view {
                     if badgeView.superview == nil {
                         self.contextContainerView.contentView.addSubview(badgeView)
@@ -1361,6 +1392,9 @@ private final class ItemComponent: Component {
             self.contextContainerView.contentRect = CGRect(origin: CGPoint(), size: availableSize)
 
             if component.isUnconstrained {
+                if component.inlineTitle {
+                    return CGSize(width: inlineTitleX + titleSize.width + 14.0, height: availableSize.height)
+                }
                 return CGSize(width: titleSize.width + 10.0 * 2.0, height: availableSize.height)
             } else {
                 return availableSize
