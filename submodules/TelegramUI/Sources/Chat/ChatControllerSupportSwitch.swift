@@ -79,6 +79,17 @@ extension ChatControllerImpl {
         })
     }
 
+    func supportEscape() {
+        guard let supportContext = self.context.supportContext, supportContext.allowsHardwarePress(of: .escape) else {
+            return
+        }
+        if self.presentationInterfaceState.interfaceState.editMessage != nil {
+            self.interfaceInteraction?.setupEditMessage(nil, { _ in })
+        } else {
+            self.dismiss(animated: true, completion: nil)
+        }
+    }
+
     func supportMoveThroughChatHistory(steps: Int) {
         guard let supportContext = self.context.supportContext, self.supportOccupationPeerId != nil, self.canReadHistoryValue, supportContext.allowsHardwarePress(of: .chatHistory), let peerId = supportContext.chatHistoryTarget(steps: steps) else {
             return

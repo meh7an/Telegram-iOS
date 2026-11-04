@@ -354,6 +354,9 @@ extension ChatControllerImpl {
             supportShortcuts.append(KeyShortcut(title: "Mute or Unmute Chat", input: "M", modifiers: [.control, .shift], action: { [weak self] in
                 self?.supportToggleMuted()
             }))
+            supportShortcuts.append(KeyShortcut(input: UIKeyCommand.inputEscape, action: { [weak self] in
+                self?.supportEscape()
+            }))
             if self.supportOccupationPeerId != nil {
                 supportShortcuts.append(KeyShortcut(title: "Previous Opened Chat", input: "X", modifiers: [.control, .shift], action: { [weak self] in
                     self?.supportMoveThroughChatHistory(steps: -1)
