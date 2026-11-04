@@ -49,6 +49,7 @@ public final class SupportContext {
     private let chatOrderLaunchResortTaken = Atomic<Bool>(value: false)
     private let searchResults = Atomic<(owner: ObjectIdentifier, peerIds: [PeerId])?>(value: nil)
     private let chatHistory = Atomic<SupportChatHistory>(value: SupportChatHistory())
+    private let chatHistoryPeerIdsPromise = ValuePromise<[PeerId]>([], ignoreRepeated: true)
     private let hardwareKeyGate = Atomic<SupportHardwareKeyGate>(value: SupportHardwareKeyGate())
     
     func takeChatOrderLaunchResort() -> Bool {
@@ -70,10 +71,23 @@ public final class SupportContext {
         }
     }
     
+    var chatHistoryPeerIds: Signal<[PeerId], NoError> {
+        return self.chatHistoryPeerIdsPromise.get()
+    }
+
     public func pushChatHistory(peerId: PeerId) {
-        let _ = self.chatHistory.modify { current in
+        let updated = self.chatHistory.modify { current in
             var current = current
             current.push(peerId: peerId)
+            return current
+        }
+        self.chatHistoryPeerIdsPromise.set(updated.peerIds)
+    }
+
+    public func selectChatHistory(position: Int, peerId: PeerId) {
+        let _ = self.chatHistory.modify { current in
+            var current = current
+            current.select(position: position, peerId: peerId)
             return current
         }
     }
