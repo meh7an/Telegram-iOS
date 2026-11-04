@@ -57,6 +57,7 @@ final class TabBarControllerNode: ASDisplayNode {
     private var strings: PresentationStrings
     private let maxItemLength: CGFloat?
     var hidesItems: Bool = false
+    private var appliedHidesItems: Bool = false
     private let itemSelected: (Int, Bool, [ASDisplayNode]) -> Void
     private let itemHasDoubleTapAction: (Int) -> Bool
     private let itemDoubleTapped: (Int) -> Void
@@ -266,6 +267,12 @@ final class TabBarControllerNode: ASDisplayNode {
         if self.tabBarView.view == nil {
             tabBarTransition = .immediate
         }
+        var previousSearchButtonFrame: CGRect?
+        if self.appliedHidesItems != self.hidesItems, let tabBarComponentView = self.tabBarView.view as? TabBarComponent.View {
+            previousSearchButtonFrame = tabBarComponentView.searchButtonFrame?.offsetBy(dx: tabBarComponentView.frame.minX, dy: tabBarComponentView.frame.minY)
+        }
+        self.appliedHidesItems = self.hidesItems
+        
         let tabBarSize = self.tabBarView.update(
             transition: tabBarTransition,
             component: AnyComponent(TabBarComponent(
@@ -357,6 +364,9 @@ final class TabBarControllerNode: ASDisplayNode {
                 }
             }
             tabBarFrameTransition.updateFrame(view: tabBarComponentView, frame: tabBarFrame)
+            if let previousSearchButtonFrame, let tabBarComponentView = tabBarComponentView as? TabBarComponent.View, let searchButtonFrame = tabBarComponentView.searchButtonFrame?.offsetBy(dx: tabBarFrame.minX, dy: tabBarFrame.minY) {
+                tabBarComponentView.animateSearchButton(fromOffset: CGPoint(x: previousSearchButtonFrame.midX - searchButtonFrame.midX, y: previousSearchButtonFrame.midY - searchButtonFrame.midY))
+            }
             transition.updateAlpha(layer: tabBarComponentView.layer, alpha: tabBarAlpha)
         }
         

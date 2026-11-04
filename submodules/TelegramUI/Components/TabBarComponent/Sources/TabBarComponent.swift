@@ -658,6 +658,14 @@ public final class TabBarComponent: Component {
             return super.hitTest(point, with: event)
         }
         
+        public var searchButtonFrame: CGRect? {
+            return self.searchView?.frame
+        }
+        
+        public func animateSearchButton(fromOffset offset: CGPoint) {
+            self.searchView?.layer.animatePosition(from: offset, to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        }
+        
         public func frameForItem(at index: Int) -> CGRect? {
             guard let component = self.component else {
                 return nil
