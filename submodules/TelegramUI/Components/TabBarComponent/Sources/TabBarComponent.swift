@@ -360,6 +360,7 @@ public final class TabBarComponent: Component {
     public let axis: Axis
     /// Icons without labels, on either axis.
     public let isCompact: Bool
+    public let maxItemLength: CGFloat?
     
     public init(
         theme: PresentationTheme,
@@ -371,7 +372,8 @@ public final class TabBarComponent: Component {
         selectedId: AnyHashable?,
         outerInsets: UIEdgeInsets,
         axis: Axis,
-        isCompact: Bool
+        isCompact: Bool,
+        maxItemLength: CGFloat? = nil
     ) {
         self.theme = theme
         self.tintSelectedItem = tintSelectedItem
@@ -383,6 +385,7 @@ public final class TabBarComponent: Component {
         self.outerInsets = outerInsets
         self.axis = axis
         self.isCompact = isCompact
+        self.maxItemLength = maxItemLength
     }
     
     public static func ==(lhs: TabBarComponent, rhs: TabBarComponent) -> Bool {
@@ -414,6 +417,9 @@ public final class TabBarComponent: Component {
             return false
         }
         if lhs.isCompact != rhs.isCompact {
+            return false
+        }
+        if lhs.maxItemLength != rhs.maxItemLength {
             return false
         }
         return true
@@ -631,6 +637,9 @@ public final class TabBarComponent: Component {
         }
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            if self.component?.maxItemLength != nil, let searchView = self.searchView, point.x > self.contextGestureContainerView.frame.maxX, point.x < searchView.frame.minX {
+                return nil
+            }
             return super.hitTest(point, with: event)
         }
         
@@ -727,7 +736,7 @@ public final class TabBarComponent: Component {
             if search != nil {
                 availableLength -= barHeight + 8.0
             }
-            let itemsLayout = tabBarItemsLayout(axis: component.axis, isCompact: component.isCompact, unboundItemWidths: unboundItemWidths, availableLength: availableLength)
+            let itemsLayout = tabBarItemsLayout(axis: component.axis, isCompact: component.isCompact, unboundItemWidths: unboundItemWidths, availableLength: availableLength, maxItemLength: component.maxItemLength)
             let tabsSize = itemsLayout.size
 
             var selectedItemFrame: CGRect?
@@ -890,7 +899,11 @@ public final class TabBarComponent: Component {
                     searchFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - searchSize.height), size: searchSize)
                 } else {
                     searchSize = CGSize(width: barHeight, height: barHeight)
-                    size.width += barHeight + 8.0
+                    if component.maxItemLength != nil {
+                        size.width = availableSize.width
+                    } else {
+                        size.width += barHeight + 8.0
+                    }
                     searchFrame = CGRect(origin: CGPoint(x: availableSize.width - searchSize.width, y: 0.0), size: searchSize)
                 }
 

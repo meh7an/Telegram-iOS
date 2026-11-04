@@ -126,7 +126,14 @@ final class ChatListLoadMoreItemNode: ListViewItemNode {
                 alignment: .center
             ))
 
-            let captionString: NSAttributedString? = item.showsFolderLimit ? NSAttributedString(string: "Older chats are not loaded, so this folder may be missing some.", font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor) : nil
+            var captionString: NSAttributedString?
+            if item.showsFolderLimit {
+                let captionFont = Font.regular(13.0)
+                let oneLineCaption = "Older chats are not loaded, so this folder may be missing some."
+                let oneLineWidth = ceil((oneLineCaption as NSString).size(withAttributes: [.font: captionFont]).width)
+                let caption = oneLineWidth <= constrainedSize.width ? oneLineCaption : "Older chats are not loaded, so\nthis folder may be missing some."
+                captionString = NSAttributedString(string: caption, font: captionFont, textColor: item.theme.list.itemSecondaryTextColor)
+            }
             let captionLayout = makeCaptionLayout(TextNodeLayoutArguments(
                 attributedString: captionString,
                 maximumNumberOfLines: 0,

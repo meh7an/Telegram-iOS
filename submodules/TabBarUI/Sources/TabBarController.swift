@@ -103,9 +103,12 @@ open class TabBarControllerImpl: ViewController, TabBarController {
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     
-    public init(theme: PresentationTheme, strings: PresentationStrings) {
+    private let maxItemLength: CGFloat?
+
+    public init(theme: PresentationTheme, strings: PresentationStrings, maxItemLength: CGFloat? = nil) {
         self.theme = theme
         self.strings = strings
+        self.maxItemLength = maxItemLength
         
         super.init(navigationBarPresentationData: nil)
         
@@ -166,7 +169,7 @@ open class TabBarControllerImpl: ViewController, TabBarController {
     }
     
     override open func loadDisplayNode() {
-        self.displayNode = TabBarControllerNode(theme: self.theme, strings: self.strings, itemSelected: { [weak self] index, longTap, itemNodes in
+        self.displayNode = TabBarControllerNode(theme: self.theme, strings: self.strings, maxItemLength: self.maxItemLength, itemSelected: { [weak self] index, longTap, itemNodes in
             if let strongSelf = self {
                 if longTap, let controller = strongSelf.controllers[index] as? TabBarContainedController {
                     controller.presentTabBarPreviewingController(sourceNodes: itemNodes)
