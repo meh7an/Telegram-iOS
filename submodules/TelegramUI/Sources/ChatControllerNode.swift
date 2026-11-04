@@ -308,6 +308,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     let navigateButtons: ChatHistoryNavigationButtons
     
     private var ignoreUpdateHeight = false
+    var supportSendStaysInChat = false
     private var overrideUpdateTextInputHeightTransition: ContainedViewLayoutTransition?
     
     private var animateInAsOverlayCompletion: (() -> Void)?
@@ -1002,6 +1003,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 if case .scheduledMessages = self.chatPresentationInterfaceState.subject, self.chatPresentationInterfaceState.editMessageState == nil {
                     self.controllerInteraction.scheduleCurrentMessage(nil)
                 } else {
+                    let handleSupportSwitch = !self.supportSendStaysInChat
                     self.maybeSendEphemeralMessage { [weak self] in
                         guard let self else {
                             return
@@ -1017,10 +1019,10 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                                 count = Int32(ceil(CGFloat(self.chatPresentationInterfaceState.interfaceState.effectiveInputState.inputText.length) / 4096.0))
                             }
                             controller.presentPaidMessageAlertIfNeeded(count: count, completion: { [weak self] postpone in
-                                self?.sendCurrentMessage(postpone: postpone, handleSupportSwitch: true)
+                                self?.sendCurrentMessage(postpone: postpone, handleSupportSwitch: handleSupportSwitch)
                             })
                         } else {
-                            self.sendCurrentMessage(handleSupportSwitch: true)
+                            self.sendCurrentMessage(handleSupportSwitch: handleSupportSwitch)
                         }
                     }
                 }

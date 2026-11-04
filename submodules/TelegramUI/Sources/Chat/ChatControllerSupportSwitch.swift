@@ -79,6 +79,15 @@ extension ChatControllerImpl {
         })
     }
 
+    func supportSendAndStay() {
+        guard let supportContext = self.context.supportContext, supportContext.allowsHardwarePress(of: .composerReturn) else {
+            return
+        }
+        self.chatDisplayNode.supportSendStaysInChat = true
+        self.chatDisplayNode.textInputPanelNode?.supportSendIfPossible()
+        self.chatDisplayNode.supportSendStaysInChat = false
+    }
+
     func supportEscape() {
         guard let supportContext = self.context.supportContext, supportContext.allowsHardwarePress(of: .escape) else {
             return

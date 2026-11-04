@@ -4938,6 +4938,12 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         return true
     }
     
+    public func supportSendIfPossible() {
+        if self.sendActionButtons.sendButton.supernode != nil && !self.sendActionButtons.sendButton.isHidden && !self.sendActionButtons.sendContainerNode.alpha.isZero {
+            self.sendButtonPressed()
+        }
+    }
+
     @objc public func editableTextNodeShouldReturn(_ editableTextNode: ASEditableTextNode) -> Bool {
         return self.chatInputTextNodeShouldReturn(modifierFlags: [])
     }
