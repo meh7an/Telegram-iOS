@@ -476,6 +476,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
         case downloading
         case recentlyDownloaded
         case publicPosts
+        case supportPublicPosts
     }
 
     case topic(EnginePeer, ChatListItemContent.ThreadInfo, Int, PresentationTheme, PresentationStrings, ChatListSearchSectionExpandType)
@@ -694,8 +695,11 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
             case .message, .messagePlaceholder, .emptyMessagesFooter, .addContact:
                 return true
             }
-        case let .message(_, _, _, _, _, _, _, _, lhsKey, _, _, _, _, _, _, _):
-            if case let .message(_, _, _, _, _, _, _, _, rhsKey, _, _, _, _, _, _, _) = rhs {
+        case let .message(_, _, _, _, _, _, _, _, lhsKey, _, lhsSection, _, _, _, _, _):
+            if case let .message(_, _, _, _, _, _, _, _, rhsKey, _, rhsSection, _, _, _, _, _) = rhs {
+                if let sectionOrder = supportSearchSectionComesFirst(lhsSection, rhsSection) {
+                    return sectionOrder
+                }
                 return lhsKey < rhsKey
             } else if case .messagePlaceholder = rhs {
                 return true
@@ -1147,7 +1151,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                         openClearRecentlyDownloaded()
                     })
                 case .index:
-                    if case .publicPosts = section {
+                    if section == .publicPosts || section == .supportPublicPosts {
                         if case .publicPosts = key {
                             header = ChatListSearchItemHeader(type: .publicPosts, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
                         } else {
@@ -3494,6 +3498,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 if !foundRemotePeers.3 {
                     index = 0
                     var existingPostIds = Set<MessageId>()
+                    var supportPublicPostEntries: [ChatListSearchEntry] = []
                     for foundPublicMessageSet in foundPublicMessages.0 {
                         for message in foundPublicMessageSet.messages {
                             if existingPostIds.contains(message.id) {
@@ -3506,7 +3511,12 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                 firstHeaderId = headerId
                             }
                             let peer = EngineRenderedPeer(message: message)
-                            entries.append(.message(message, peer, foundPublicMessageSet.readCounters[message.id.peerId], foundPublicMessageSet.threadsData[message.id]?.info, presentationData, foundPublicMessageSet.totalCount, nil, headerId == firstHeaderId, .index(message.index), nil, .publicPosts, false, nil, false, .everywhere, false))
+                            let publicPostEntry: ChatListSearchEntry = .message(message, peer, foundPublicMessageSet.readCounters[message.id.peerId], foundPublicMessageSet.threadsData[message.id]?.info, presentationData, foundPublicMessageSet.totalCount, nil, headerId == firstHeaderId, .index(message.index), nil, supportSearchApplies ? .supportPublicPosts : .publicPosts, false, nil, false, .everywhere, false)
+                            if supportSearchApplies {
+                                supportPublicPostEntries.append(publicPostEntry)
+                            } else {
+                                entries.append(publicPostEntry)
+                            }
                             index += 1
                         }
                     }
@@ -3514,6 +3524,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     let hadAnySearchMessagesBefore = hadAnySearchMessages.with { $0 }
                     var existingMessageIds = Set<MessageId>()
                     if foundRemoteMessages.1 && (searchScope != .everywhere || hadAnySearchMessagesBefore) {
+                        entries.append(contentsOf: supportPublicPostEntries)
                         for i in 0 ..< 6 {
                             entries.append(.messagePlaceholder(Int32(i), presentationData, searchScope))
                             index += 1
@@ -3560,6 +3571,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                             }
                         }
 
+                        entries.append(contentsOf: supportPublicPostEntries)
                         if hasAnyMessages {
                             let _ = hadAnySearchMessages.swap(true)
                         } else {

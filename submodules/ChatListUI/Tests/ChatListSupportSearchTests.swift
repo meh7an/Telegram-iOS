@@ -34,6 +34,18 @@ final class ChatListSupportSearchTests: XCTestCase {
         XCTAssertEqual(self.rows([2, 3], shown: &shown), [1])
     }
 
+    func testChatResultsComeBeforeSupportPublicPostsWhateverTheirDates() {
+        XCTAssertEqual(supportSearchSectionComesFirst(.generic, .supportPublicPosts), true)
+        XCTAssertEqual(supportSearchSectionComesFirst(.supportPublicPosts, .generic), false)
+    }
+
+    func testOtherSectionsKeepTheirDateOrder() {
+        XCTAssertNil(supportSearchSectionComesFirst(.generic, .generic))
+        XCTAssertNil(supportSearchSectionComesFirst(.supportPublicPosts, .supportPublicPosts))
+        XCTAssertNil(supportSearchSectionComesFirst(.generic, .publicPosts))
+        XCTAssertNil(supportSearchSectionComesFirst(.publicPosts, .generic))
+    }
+
     func testAppliesOnlyToTheChatsTabOfAChatListOnASupportAccount() {
         XCTAssertTrue(supportSearchAppliesToPane(hasSupportContext: true, key: .chats, location: .chatList(groupId: .root)))
         XCTAssertTrue(supportSearchAppliesToPane(hasSupportContext: true, key: .chats, location: .chatList(groupId: .archive)))

@@ -9,6 +9,15 @@ func supportSearchAppliesToPane(hasSupportContext: Bool, key: ChatListSearchPane
     return true
 }
 
+func supportSearchSectionComesFirst(_ lhs: ChatListSearchEntry.MessageSection, _ rhs: ChatListSearchEntry.MessageSection) -> Bool? {
+    let lhsIsPublicPost = lhs == .supportPublicPosts
+    let rhsIsPublicPost = rhs == .supportPublicPosts
+    if lhsIsPublicPost == rhsIsPublicPost {
+        return nil
+    }
+    return rhsIsPublicPost
+}
+
 func supportOneRowPerChat<Row>(_ rows: [Row], peerId: (Row) -> EnginePeer.Id, isRemoved: (Row) -> Bool, shownPeerIds: inout Set<EnginePeer.Id>) -> [Row] {
     var result: [Row] = []
     for row in rows where !isRemoved(row) {
