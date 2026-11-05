@@ -376,6 +376,32 @@ func chatHistoryEntriesForView(
         }
     }
     
+    if context.supportContext?.currentTrailingTags == true {
+        let hasTrailingTags: (Message) -> Bool = { message in
+            return message.effectivelyIncoming(context.account.peerId) && trailingHashtagFooter(text: message.text, entities: message.textEntitiesAttribute?.entities ?? []) != nil
+        }
+        latest: for i in (0 ..< entries.count).reversed() {
+            switch entries[i] {
+            case let .MessageEntry(message, presentationData, isRead, location, selection, attributes):
+                if hasTrailingTags(message) {
+                    var attributes = attributes
+                    attributes.isLatestWithTrailingTags = true
+                    entries[i] = .MessageEntry(message, presentationData, isRead, location, selection, attributes)
+                    break latest
+                }
+            case let .MessageGroupEntry(groupStableId, messages, presentationData):
+                if let index = messages.lastIndex(where: { hasTrailingTags($0.0) }) {
+                    var messages = messages
+                    messages[index].3.isLatestWithTrailingTags = true
+                    entries[i] = .MessageGroupEntry(groupStableId, messages, presentationData)
+                    break latest
+                }
+            default:
+                break
+            }
+        }
+    }
+    
     let insertPendingProcessingMessage: ([Message], Int) -> Void = { messages, index in
         let serviceMessage = Message(
             stableId: UInt32.max - messages[0].stableId,

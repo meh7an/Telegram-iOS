@@ -59,6 +59,7 @@ private enum SupportSettingsSection: Int32 {
     case sending
     case order
     case quiet
+    case tags
     case beside
     case period
     case loading
@@ -76,6 +77,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         case automaticMediaDownload
         case inAppNotifications
         case quietInfo
+        case trailingTags
+        case trailingTagsInfo
         case besideHeader
         case beside(Int32)
         case besideInfo
@@ -101,6 +104,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
     case automaticMediaDownload(String, Bool)
     case inAppNotifications(String, Bool)
     case quietInfo(String)
+    case trailingTags(String, Bool)
+    case trailingTagsInfo(String)
     case besideHeader(String)
     case beside(index: Int32, value: SupportChatListBeside, title: String, isSelected: Bool)
     case besideInfo(String)
@@ -127,6 +132,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return SupportSettingsSection.order.rawValue
         case .automaticMediaDownload, .inAppNotifications, .quietInfo:
             return SupportSettingsSection.quiet.rawValue
+        case .trailingTags, .trailingTagsInfo:
+            return SupportSettingsSection.tags.rawValue
         case .besideHeader, .beside, .besideInfo:
             return SupportSettingsSection.beside.rawValue
         case .periodHeader, .period, .periodInfo:
@@ -158,6 +165,10 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return .inAppNotifications
         case .quietInfo:
             return .quietInfo
+        case .trailingTags:
+            return .trailingTags
+        case .trailingTagsInfo:
+            return .trailingTagsInfo
         case .besideHeader:
             return .besideHeader
         case let .beside(_, value, _, _):
@@ -209,16 +220,20 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return 8
         case .quietInfo:
             return 9
-        case .besideHeader:
+        case .trailingTags:
             return 10
+        case .trailingTagsInfo:
+            return 11
+        case .besideHeader:
+            return 12
         case let .beside(index, _, _, _):
-            return 11 + index
+            return 13 + index
         case .besideInfo:
-            return 14
+            return 16
         case .periodHeader:
-            return 15
+            return 17
         case let .period(index, _, _, _):
-            return 16 + index
+            return 18 + index
         case .periodInfo:
             return 100
         case .loadMore:
@@ -291,6 +306,14 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     return settings
                 }
             })
+        case let .trailingTags(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateSettings { settings in
+                    var settings = settings
+                    settings.trailingTags = value
+                    return settings
+                }
+            })
         case let .besideHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .beside(_, value, title, isSelected):
@@ -311,7 +334,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     return settings
                 }
             })
-        case let .fixChatsOrderInfo(text), let .quietInfo(text), let .besideInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
+        case let .fixChatsOrderInfo(text), let .quietInfo(text), let .trailingTagsInfo(text), let .besideInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .shortcuts(title):
             return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: title, label: "", sectionId: self.section, style: .blocks, action: {
@@ -384,6 +407,9 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
     entries.append(.automaticMediaDownload("Auto-download media", settings.automaticMediaDownload))
     entries.append(.inAppNotifications("In-app notifications", settings.inAppNotifications))
     entries.append(.quietInfo("These apply to this account only. With auto-download off, media loads when you tap it. With notifications off, new messages play no sound and show no banner while the app is open."))
+
+    entries.append(.trailingTags("Show tags under messages", settings.trailingTags))
+    entries.append(.trailingTagsInfo("Hashtags at the end of an incoming message show as tags under it, in one row you can expand. With this off, they stay in the message text."))
 
     entries.append(.besideHeader("CHAT LIST BESIDE CHATS"))
     for (index, option) in supportChatListBesideOptions.enumerated() {

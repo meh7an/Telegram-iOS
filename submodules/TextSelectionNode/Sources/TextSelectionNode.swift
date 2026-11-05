@@ -262,6 +262,7 @@ public final class TextSelectionNode: ASDisplayNode {
     private let textNodeOrView: TextNodeOrView
     private let updateIsActive: (Bool) -> Void
     public var canBeginSelection: (CGPoint) -> Bool = { _ in true }
+    public var adjustInitialSelection: ((NSRange) -> NSRange)?
     public var updateRange: ((NSRange?) -> Void)?
     public var presentMenu: ((UIView, CGPoint, [ContextMenuAction]) -> Void)?
     private let present: (ViewController, Any?) -> Void
@@ -408,6 +409,9 @@ public final class TextSelectionNode: ASDisplayNode {
                 if resultRange == nil {
                     resultRange = NSRange(location: stringIndex, length: 1)
                 }
+            }
+            if let range = resultRange, let adjustInitialSelection = strongSelf.adjustInitialSelection {
+                resultRange = adjustInitialSelection(range)
             }
             
             strongSelf.currentRange = resultRange.flatMap {

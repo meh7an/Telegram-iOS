@@ -94,6 +94,21 @@ final class SupportSettingsTests: XCTestCase {
         XCTAssertTrue(supportChatListBesideNarrowsList(.everywhere, isLandscape: false))
     }
 
+    func testTrailingTagsAreOnByDefaultAndFollowTheSettings() {
+        XCTAssertTrue(SupportSettings.default.trailingTags)
+        XCTAssertEqual(PreferencesEntry(PartialSettings(sendAllSilently: true))?.get(SupportSettings.self)?.trailingTags, true)
+
+        var settings = SupportSettings.default
+        settings.trailingTags = false
+        XCTAssertEqual(PreferencesEntry(settings)?.get(SupportSettings.self)?.trailingTags, false)
+
+        let promise = ValuePromise<SupportSettings>(.default)
+        let context = SupportContext(settings: promise.get())
+        XCTAssertTrue(context.currentTrailingTags)
+        promise.set(settings)
+        XCTAssertFalse(context.currentTrailingTags)
+    }
+
     func testMissingValuesTakeTheirDefaults() {
         var expected = SupportSettings.default
         expected.sendAllSilently = true
