@@ -115,6 +115,29 @@ extension ChatControllerImpl {
         }
     }
 
+    private var supportComposerHasSelection: Bool {
+        if let selection = self.chatDisplayNode.textInputPanelNode?.supportComposerTextAndSelection?.selection {
+            return selection.length > 0
+        }
+        return false
+    }
+
+    func supportMutesOnMonospaceKey() -> Bool {
+        guard self.context.supportContext != nil, !self.supportComposerHasSelection else {
+            return false
+        }
+        self.supportToggleMuted()
+        return true
+    }
+
+    func supportMovesBackOnStrikethroughKey() -> Bool {
+        guard self.context.supportContext != nil, self.supportOccupationPeerId != nil, !self.supportComposerHasSelection else {
+            return false
+        }
+        self.supportMoveThroughChatHistory(steps: -1)
+        return true
+    }
+
     func supportMoveThroughChatHistory(steps: Int) {
         guard let supportContext = self.context.supportContext, self.supportOccupationPeerId != nil, self.canReadHistoryValue, supportContext.allowsHardwarePress(of: .chatHistory), let peerId = supportContext.chatHistoryTarget(steps: steps) else {
             return

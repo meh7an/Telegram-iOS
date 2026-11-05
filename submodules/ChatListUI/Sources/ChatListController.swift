@@ -5118,12 +5118,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             supportShortcuts.append(KeyShortcut(title: "Show Current Chat in List", input: "L", modifiers: [.control, .shift], action: { [weak self] in
                 self?.chatListDisplayNode.effectiveContainerNode.currentItemNode.scrollToHighlightedChat()
             }))
-            supportShortcuts.append(KeyShortcut(title: "Open Abuse Bot", input: "A", modifiers: [.control, .shift], action: { [weak self] in
+            supportShortcuts.append(KeyShortcut(input: "L", modifiers: [.command, .shift], action: { [weak self] in
+                self?.chatListDisplayNode.effectiveContainerNode.currentItemNode.scrollToHighlightedChat()
+            }))
+            let openAbuseBot: () -> Void = { [weak self] in
                 guard let self, self.supportListIsOnScreen, self.context.supportContext?.allowsHardwarePress(of: .openAbuseBot) == true else {
                     return
                 }
                 self.openSupportAbuseBot()
-            }))
+            }
+            supportShortcuts.append(KeyShortcut(title: "Open Abuse Bot", input: "A", modifiers: [.control, .shift], action: openAbuseBot))
+            supportShortcuts.append(KeyShortcut(input: "A", modifiers: [.command, .shift], action: openAbuseBot))
         }
 
         return inputShortcuts + folderShortcuts + chatShortcuts + supportShortcuts

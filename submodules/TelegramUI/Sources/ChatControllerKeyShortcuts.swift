@@ -61,6 +61,9 @@ extension ChatControllerImpl {
                 }),
                 KeyShortcut(input: "M", modifiers: [.shift, .command], action: { [weak self] in
                     if let strongSelf = self {
+                        if strongSelf.supportMutesOnMonospaceKey() {
+                            return
+                        }
                         if strongSelf.chatDisplayNode.textInputPanelNode?.performNativeFormatShortcut(.monospace) == true {
                             return
                         }
@@ -87,6 +90,9 @@ extension ChatControllerImpl {
                 }),
                 KeyShortcut(input: "X", modifiers: [.command, .shift], action: { [weak self] in
                     if let strongSelf = self {
+                        if strongSelf.supportMovesBackOnStrikethroughKey() {
+                            return
+                        }
                         if strongSelf.chatDisplayNode.textInputPanelNode?.performNativeFormatShortcut(.strikethrough) == true {
                             return
                         }
@@ -354,7 +360,15 @@ extension ChatControllerImpl {
             supportShortcuts.append(KeyShortcut(title: "Mute or Unmute Chat", input: "M", modifiers: [.control, .shift], action: { [weak self] in
                 self?.supportToggleMuted()
             }))
+            if !self.chatDisplayNode.isInputViewFocused {
+                supportShortcuts.append(KeyShortcut(input: "M", modifiers: [.command, .shift], action: { [weak self] in
+                    self?.supportToggleMuted()
+                }))
+            }
             supportShortcuts.append(KeyShortcut(title: "Send and Stay", input: "\r", modifiers: [.control, .shift], action: { [weak self] in
+                self?.supportSendAndStay()
+            }))
+            supportShortcuts.append(KeyShortcut(input: "\r", modifiers: [.command, .shift], action: { [weak self] in
                 self?.supportSendAndStay()
             }))
             supportShortcuts.append(KeyShortcut(input: UIKeyCommand.inputEscape, action: { [weak self] in
@@ -373,6 +387,14 @@ extension ChatControllerImpl {
                 supportShortcuts.append(KeyShortcut(title: "Next Opened Chat", input: "C", modifiers: [.control, .shift], action: { [weak self] in
                     self?.supportMoveThroughChatHistory(steps: 1)
                 }))
+                supportShortcuts.append(KeyShortcut(input: "C", modifiers: [.command, .shift], action: { [weak self] in
+                    self?.supportMoveThroughChatHistory(steps: 1)
+                }))
+                if !self.chatDisplayNode.isInputViewFocused {
+                    supportShortcuts.append(KeyShortcut(input: "X", modifiers: [.command, .shift], action: { [weak self] in
+                        self?.supportMoveThroughChatHistory(steps: -1)
+                    }))
+                }
             }
         }
 

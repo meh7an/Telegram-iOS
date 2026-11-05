@@ -1181,7 +1181,9 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     private func loadTextInputNode(useNative: Bool = false) {
         let richTextInputNode: ChatRichTextInputNode
         if useNative {
-            richTextInputNode = RichTextEditorChatInputNode(strings: self.presentationInterfaceState?.strings ?? defaultPresentationStrings, inputBackend: self.richTextInputBackendPreference, useInputDecEngine: self.useInputDecEngineEditor)
+            let nativeInputNode = RichTextEditorChatInputNode(strings: self.presentationInterfaceState?.strings ?? defaultPresentationStrings, inputBackend: self.richTextInputBackendPreference, useInputDecEngine: self.useInputDecEngineEditor)
+            nativeInputNode.formatKeysNeedSelection = self.context?.supportContext != nil
+            richTextInputNode = nativeInputNode
         } else {
             richTextInputNode = makeChatRichTextInputNode()
         }

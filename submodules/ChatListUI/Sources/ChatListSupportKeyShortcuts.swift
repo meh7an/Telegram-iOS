@@ -42,6 +42,7 @@ public func supportTemplatesReloadKeyShortcuts(context: AccountContext, present:
     }
     return [
         KeyShortcut(title: "Reload Templates", input: UIKeyCommand.f5, action: reload),
-        KeyShortcut(input: "R", modifiers: [.control, .shift], action: reload)
+        KeyShortcut(input: "R", modifiers: [.control, .shift], action: reload),
+        KeyShortcut(input: "R", modifiers: [.command, .shift], action: reload)
     ]
 }
