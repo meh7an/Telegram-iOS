@@ -73,7 +73,9 @@ private final class SearchField: UITextField {
     }
 
     override func editingRect(forBounds bounds: CGRect) -> CGRect {
-        return bounds.insetBy(dx: 12.0, dy: 0.0)
+        var rect = bounds.insetBy(dx: 12.0, dy: 0.0)
+        rect.size.width -= 22.0
+        return rect
     }
 }
 
