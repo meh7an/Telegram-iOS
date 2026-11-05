@@ -2041,7 +2041,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         let contextController = makeContextController(context: strongSelf.context, presentationData: strongSelf.presentationData, source: source, items: chatContextMenuItems(context: strongSelf.context, peerId: peer.peerId, promoInfo: promoInfo, source: .chatList(filter: strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.chatListFilter), chatListController: strongSelf, joined: joined) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                         strongSelf.presentInGlobalOverlay(contextController)
                         if location == nil {
-                            strongSelf.supportAddPreviewShortcuts(contextController: contextController, peerId: peer.peerId)
+                            strongSelf.supportAddPreviewShortcuts(contextController: contextController, peerId: peer.peerId, peer: peer.peer)
                         }
                         
                         dismissPreviewingImpl = { [weak self, weak contextController] animateIn in
@@ -3835,9 +3835,18 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         return true
     }
     
-    private func supportAddPreviewShortcuts(contextController: ContextController, peerId: EnginePeer.Id) {
+    private func supportAddPreviewShortcuts(contextController: ContextController, peerId: EnginePeer.Id, peer: EnginePeer?) {
         guard self.context.supportContext != nil, !self.previewing else {
             return
+        }
+        contextController.returnKeyAction = { [weak self, weak contextController] in
+            guard let self, let contextController, let peer, self.context.supportContext?.allowsHardwarePress(of: .composerReturn) == true else {
+                return
+            }
+            contextController.additionalKeyShortcuts = []
+            contextController.returnKeyAction = nil
+            contextController.dismissWithoutContent()
+            self.chatListDisplayNode.mainContainerNode.peerSelected?(peer, nil, true, true, nil)
         }
         contextController.additionalKeyShortcuts = [
             KeyShortcut(input: UIKeyCommand.inputUpArrow, modifiers: [.alternate], wantsPriorityOverText: true, action: { [weak self, weak contextController] in
@@ -3882,6 +3891,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return
             }
             contextController.additionalKeyShortcuts = []
+            contextController.returnKeyAction = nil
             contextController.dismissWithoutContent()
             rowNode.supportActivatePreview()
         })
