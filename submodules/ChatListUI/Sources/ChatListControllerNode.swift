@@ -1184,6 +1184,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     var navigationBar: NavigationBar?
     let navigationBarView = ComponentView<Empty>()
     private var supportNarrowListTopEdge: EdgeEffectView?
+    private var supportNavigationBarIsHidden: Bool = false
     weak var controller: ChatListControllerImpl?
     
     private var toolbar: ComponentView<Empty>?
@@ -1919,7 +1920,12 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         let supportNarrowListPeerId = self.controller?.supportNarrowListPeerId
         let supportNarrowListIsRevealed = self.controller?.supportNarrowListIsRevealed ?? false
         if self.context.supportContext != nil {
-            self.navigationBarView.view?.isHidden = supportNarrowListPeerId != nil && !supportNarrowListIsRevealed
+            let navigationBarIsHidden = supportNarrowListPeerId != nil && !supportNarrowListIsRevealed
+            if self.supportNavigationBarIsHidden != navigationBarIsHidden, let navigationBarView = self.navigationBarView.view {
+                self.supportNavigationBarIsHidden = navigationBarIsHidden
+                navigationBarView.isUserInteractionEnabled = !navigationBarIsHidden
+                ComponentTransition(transition).setBounds(view: navigationBarView, bounds: CGRect(origin: CGPoint(x: 0.0, y: navigationBarIsHidden ? navigationBarView.bounds.height : 0.0), size: navigationBarView.bounds.size))
+            }
             self.searchDisplayController?.updateIsContentHidden(supportNarrowListPeerId != nil && !supportNarrowListIsRevealed)
         }
         if supportNarrowListPeerId != nil {

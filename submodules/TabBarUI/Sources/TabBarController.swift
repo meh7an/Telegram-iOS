@@ -113,6 +113,7 @@ open class TabBarControllerImpl: ViewController, TabBarController {
     public var hidesTabBar: Bool = false {
         didSet {
             if self.isNodeLoaded {
+                self.tabBarControllerNode.hidesBarWithGlass = self.hidesTabBar
                 self.tabBarControllerNode.tabBarHidden = self.hidesTabBar
             }
         }

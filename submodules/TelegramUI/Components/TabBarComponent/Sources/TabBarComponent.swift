@@ -895,8 +895,15 @@ public final class TabBarComponent: Component {
                 tabsFrame.origin.x = -component.outerInsets.left - tabsFrame.width
             }
 
-            self.contextGestureContainerView.isHidden = component.hidesItems
-            transition.setFrame(view: self.contextGestureContainerView, frame: tabsFrame)
+            let itemsWereHidden = previousComponent?.hidesItems ?? false
+            if itemsWereHidden || component.hidesItems {
+                self.contextGestureContainerView.isUserInteractionEnabled = !component.hidesItems
+                transition.setPosition(view: self.contextGestureContainerView, position: tabsFrame.center)
+                transition.setBounds(view: self.contextGestureContainerView, bounds: CGRect(origin: CGPoint(), size: tabsFrame.size))
+                transition.setScale(view: self.contextGestureContainerView, scale: component.hidesItems ? 0.001 : 1.0)
+            } else {
+                transition.setFrame(view: self.contextGestureContainerView, frame: tabsFrame)
+            }
             transition.setFrame(view: self.liquidLensView, frame: CGRect(origin: CGPoint(), size: tabsSize))
             
             var lensSize: CGSize = tabsSize
