@@ -135,6 +135,16 @@ final class SplitSelectionTests: XCTestCase {
         XCTAssertEqual(master.reveals, [true, false])
     }
 
+    func test_narrowMasterKeepsItsContentAtFullWidth_soCompressingItRedrawsNothing() {
+        let split = self.makeSplitContainer()
+        let layout = self.unfoldedLandscape
+        let master = RecordingMaster()
+        split.prepareMasterFull(layout: layout, masterWidth: 72.0, masterControllers: [master])
+        split.update(layout: layout, masterWidthOverride: 72.0, masterControllers: [master], detailControllers: [DetailChat()], detailsPlaceholderNode: nil, transition: .immediate)
+        XCTAssertEqual(split.masterContentWidth, layout.size.width)
+        XCTAssertEqual(split.scrollToTopProxyFrames(layout: layout).master.width, 72.0)
+    }
+
     func test_swipeClosesPastAThirdOrOnAFlick() {
         XCTAssertFalse(narrowMasterSwipeCloses(offset: 100.0, velocity: 0.0, width: 318.0))
         XCTAssertTrue(narrowMasterSwipeCloses(offset: 110.0, velocity: 0.0, width: 318.0))

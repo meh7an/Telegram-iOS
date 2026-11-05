@@ -3788,6 +3788,9 @@ public final class ChatListNode: ListViewImpl {
             
             additionalScrollDistance += insetDelta
         }
+        if self.context.supportContext != nil, transition.isAnimated, updateSizeAndInsets.size.width != self.visibleSize.width {
+            options.insert(.AnimateInsertion)
+        }
         self.ignoreStopScrolling = true
         self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: options, scrollToItem: nil, additionalScrollDistance: additionalScrollDistance, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         self.ignoreStopScrolling = false

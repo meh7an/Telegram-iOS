@@ -37,6 +37,8 @@ final class NavigationSplitContainer: ASDisplayNode {
     private(set) var detailControllers: [ViewController] = []
     private var masterWidthOverride: CGFloat?
     private(set) var detailSwipeOffset: CGFloat = 0.0
+    private(set) var masterContentWidth: CGFloat = 0.0
+    private(set) var layoutMetrics: LayoutMetrics = LayoutMetrics()
     
     var detailSwipeIsAvailable: Bool {
         return self.detailContainer.swipeClosesFirstController
@@ -118,13 +120,10 @@ final class NavigationSplitContainer: ASDisplayNode {
         )
     }
 
-    func animateDetailIn(over previousContent: UIView) {
+    func animateDetailIn() {
         let duration: Double = 0.3
-        self.view.insertSubview(previousContent, aboveSubview: self.masterContainer.view)
-        previousContent.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false, completion: { [weak previousContent] _ in
-            previousContent?.removeFromSuperview()
-        })
         self.detailContainer.layer.animatePosition(from: CGPoint(x: self.detailContainer.bounds.width, y: 0.0), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        self.separator.layer.animatePosition(from: CGPoint(x: self.detailContainer.bounds.width, y: 0.0), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
     }
     
     func animateDetailOut(over nextContent: UIView) {
@@ -178,6 +177,13 @@ final class NavigationSplitContainer: ASDisplayNode {
         transition.updateFrame(node: self.separator, frame: CGRect(origin: CGPoint(x: detailMinX, y: 0.0), size: CGSize(width: UIScreenPixel, height: size.height)))
     }
     
+    func prepareMasterFull(layout: ContainerViewLayout, masterWidth: CGFloat, masterControllers: [ViewController]) {
+        self.masterContainer.frame = CGRect(origin: CGPoint(), size: layout.size)
+        self.masterContainer.update(layout: layout, canBeClosed: false, controllers: masterControllers, transition: .immediate)
+        self.detailContainer.frame = CGRect(origin: CGPoint(x: masterWidth, y: 0.0), size: CGSize(width: layout.size.width - masterWidth, height: layout.size.height))
+        self.separator.frame = CGRect(origin: CGPoint(x: masterWidth, y: 0.0), size: CGSize(width: UIScreenPixel, height: layout.size.height))
+    }
+    
     func update(layout: ContainerViewLayout, masterWidthOverride: CGFloat? = nil, masterControllers: [ViewController], detailControllers: [ViewController], detailsPlaceholderNode: NavigationDetailsPlaceholderNode?, transition: ContainedViewLayoutTransition) {
         self.masterWidthOverride = masterWidthOverride
         if masterWidthOverride == nil {
@@ -186,6 +192,8 @@ final class NavigationSplitContainer: ASDisplayNode {
         let masterWidth = masterWidthOverride ?? splitMasterWidth(containerSize: layout.size, division: layout.division)
         let masterContentWidth = masterWidthOverride != nil ? max(masterWidth, layout.size.width) : masterWidth
         let detailWidth = layout.size.width - masterWidth
+        self.masterContentWidth = masterContentWidth
+        self.layoutMetrics = layout.metrics
         
         self.updatePaneFrames(masterWidth: masterWidth, size: layout.size, transition: transition)
         

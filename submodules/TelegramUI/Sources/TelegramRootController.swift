@@ -91,6 +91,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     private var applicationInFocusDisposable: Disposable?
     private var storyUploadEventsDisposable: Disposable?
     private var supportChatListBesideDisposable: Disposable?
+    private var supportPendingBesideState: (hidesTabBarItems: Bool, hidesTabBar: Bool, showsListOnly: Bool, narrowListPeerId: EnginePeer.Id?)?
     
     override public var minimizedContainer: MinimizedContainer? {
         didSet {
@@ -210,7 +211,8 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     }
     
     override public func rootContainerMasterWidth(for layout: ContainerViewLayout) -> CGFloat? {
-        guard (self.chatListController as? ChatListControllerImpl)?.supportNarrowListPeerId != nil else {
+        let narrowListPeerId = self.supportPendingBesideState != nil ? self.supportPendingBesideState?.narrowListPeerId : (self.chatListController as? ChatListControllerImpl)?.supportNarrowListPeerId
+        guard narrowListPeerId != nil else {
             return nil
         }
         return layout.safeInsets.left + 72.0
@@ -233,14 +235,22 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         }
         let showsListBesideChat = openChatPeerId != nil
         let narrowsList = showsListBesideChat && supportChatListBesideNarrowsList(chatListBeside, isLandscape: isLandscape)
-        (self.rootTabController as? TabBarControllerImpl)?.hidesTabBarItems = showsListBesideChat && !narrowsList
-        (self.rootTabController as? TabBarControllerImpl)?.hidesTabBar = narrowsList
-        (self.chatListController as? ChatListControllerImpl)?.supportShowsListOnly = showsListBesideChat
-        (self.chatListController as? ChatListControllerImpl)?.supportNarrowListPeerId = narrowsList ? openChatPeerId : nil
+        self.supportPendingBesideState = (showsListBesideChat && !narrowsList, narrowsList, showsListBesideChat, narrowsList ? openChatPeerId : nil)
         if showsListBesideChat {
             return LayoutMetrics(widthClass: .regular, heightClass: .regular, orientation: layout.metrics.orientation, windowSize: layout.metrics.windowSize)
         }
         return layout.metrics
+    }
+    
+    override public func applyRootContainerState() {
+        guard let state = self.supportPendingBesideState else {
+            return
+        }
+        self.supportPendingBesideState = nil
+        (self.rootTabController as? TabBarControllerImpl)?.hidesTabBarItems = state.hidesTabBarItems
+        (self.rootTabController as? TabBarControllerImpl)?.hidesTabBar = state.hidesTabBar
+        (self.chatListController as? ChatListControllerImpl)?.supportShowsListOnly = state.showsListOnly
+        (self.chatListController as? ChatListControllerImpl)?.supportNarrowListPeerId = state.narrowListPeerId
     }
     
     public func addRootControllers(showCallsTab: Bool, showNewsTab: Bool) {

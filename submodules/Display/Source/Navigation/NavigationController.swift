@@ -501,6 +501,9 @@ open class NavigationController: UINavigationController, ContainableController, 
         return false
     }
     
+    open func applyRootContainerState() {
+    }
+    
     func updateContainersNonReentrant(transition: ContainedViewLayoutTransition) {
         if self.isUpdatingContainers {
             return
@@ -1017,6 +1020,18 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
         }
         
+        var seedsRootContainerChange = false
+        if self.animatesRootContainerChange, transition.isAnimated, let rootContainer = self.rootContainer {
+            switch (rootContainer, navigationLayout.root) {
+            case (.flat, .split), (.split, .flat):
+                seedsRootContainerChange = true
+            default:
+                break
+            }
+        }
+        if !seedsRootContainerChange {
+            self.applyRootContainerState()
+        }
         switch navigationLayout.root {
         case let .flat(controllers):
             if let rootContainer = self.rootContainer {
@@ -1061,9 +1076,15 @@ open class NavigationController: UINavigationController, ContainableController, 
                     }
                     self.rootContainer = .flat(flatContainer)
                     flatContainer.frame = CGRect(origin: CGPoint(), size: layout.size)
-                    flatContainer.update(layout: layout, canBeClosed: false, controllers: controllers, transition: .immediate)
-                    if self.animatesRootContainerChange, transition.isAnimated {
+                    if seedsRootContainerChange {
+                        var seedLayout = layout.withUpdatedSize(CGSize(width: splitContainer.masterContentWidth, height: layout.size.height))
+                        seedLayout.metrics = splitContainer.layoutMetrics
+                        flatContainer.update(layout: seedLayout, canBeClosed: false, controllers: controllers, transition: .immediate)
+                        self.applyRootContainerState()
+                        flatContainer.update(layout: layout, canBeClosed: false, controllers: controllers, transition: .animated(duration: 0.3, curve: .spring))
                         splitContainer.animateDetailOut(over: flatContainer.view)
+                    } else {
+                        flatContainer.update(layout: layout, canBeClosed: false, controllers: controllers, transition: .immediate)
                     }
                     splitContainer.clearDetailSelection()
                     splitContainer.removeFromSupernode()
@@ -1120,11 +1141,14 @@ open class NavigationController: UINavigationController, ContainableController, 
                     } else {
                         splitContainer.canHaveKeyboardFocus = false
                     }
-                    let flatSnapshot = (self.animatesRootContainerChange && transition.isAnimated) ? flatContainer.view.snapshotView(afterScreenUpdates: false) : nil
                     splitContainer.frame = CGRect(origin: CGPoint(), size: layout.size)
-                    splitContainer.update(layout: splitLayout, masterWidthOverride: masterWidthOverride, masterControllers: masterControllers, detailControllers: detailControllers, detailsPlaceholderNode: self.detailsPlaceholderNode, transition: .immediate)
-                    if let flatSnapshot {
-                        splitContainer.animateDetailIn(over: flatSnapshot)
+                    if seedsRootContainerChange {
+                        splitContainer.prepareMasterFull(layout: layout, masterWidth: masterWidthOverride ?? splitMasterWidth(containerSize: layout.size, division: layout.division), masterControllers: masterControllers)
+                        self.applyRootContainerState()
+                    }
+                    splitContainer.update(layout: splitLayout, masterWidthOverride: masterWidthOverride, masterControllers: masterControllers, detailControllers: detailControllers, detailsPlaceholderNode: self.detailsPlaceholderNode, transition: seedsRootContainerChange ? .animated(duration: 0.3, curve: .spring) : .immediate)
+                    if seedsRootContainerChange {
+                        splitContainer.animateDetailIn()
                     }
                     flatContainer.statusBarStyleUpdated = nil
                     flatContainer.removeFromSupernode()
