@@ -59,6 +59,12 @@ open class TabBarControllerImpl: ViewController, TabBarController {
         }
     }
     
+    open override func narrowMasterRevealUpdated(_ isRevealed: Bool) {
+        for controller in self.controllers {
+            controller.narrowMasterRevealUpdated(isRevealed)
+        }
+    }
+    
     public private(set) var controllers: [ViewController] = []
     
     private let _ready = Promise<Bool>()

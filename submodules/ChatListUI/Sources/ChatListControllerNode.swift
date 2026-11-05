@@ -1917,9 +1917,10 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         storiesInset = navigationBarLayout.storiesInset
         
         let supportNarrowListPeerId = self.controller?.supportNarrowListPeerId
+        let supportNarrowListIsRevealed = self.controller?.supportNarrowListIsRevealed ?? false
         if self.context.supportContext != nil {
-            self.navigationBarView.view?.isHidden = supportNarrowListPeerId != nil
-            self.searchDisplayController?.updateIsContentHidden(supportNarrowListPeerId != nil)
+            self.navigationBarView.view?.isHidden = supportNarrowListPeerId != nil && !supportNarrowListIsRevealed
+            self.searchDisplayController?.updateIsContentHidden(supportNarrowListPeerId != nil && !supportNarrowListIsRevealed)
         }
         if supportNarrowListPeerId != nil {
             let statusBarHeight = layout.statusBarHeight ?? 0.0
@@ -2052,7 +2053,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             cleanMainNavigationBarHeight = visualNavigationHeight
             mainInsets.top = visualNavigationHeight
         }
-        self.mainContainerNode.update(layout: layout, navigationBarHeight: mainNavigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: navigationBarHeight, cleanNavigationBarHeight: cleanMainNavigationBarHeight, insets: mainInsets, isReorderingFilters: self.isReorderingFilters, isEditing: self.isEditing, inlineNavigationLocation: self.inlineStackContainerNode?.location ?? supportNarrowListPeerId.flatMap { .forum(peerId: $0) }, inlineNavigationTransitionFraction: supportNarrowListPeerId != nil ? 1.0 : self.inlineStackContainerTransitionFraction, storiesInset: storiesInset, transition: transition)
+        self.mainContainerNode.update(layout: layout, navigationBarHeight: mainNavigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: navigationBarHeight, cleanNavigationBarHeight: cleanMainNavigationBarHeight, insets: mainInsets, isReorderingFilters: self.isReorderingFilters, isEditing: self.isEditing, inlineNavigationLocation: self.inlineStackContainerNode?.location ?? supportNarrowListPeerId.flatMap { .forum(peerId: $0) }, inlineNavigationTransitionFraction: supportNarrowListPeerId != nil ? (supportNarrowListIsRevealed ? 0.0 : 1.0) : self.inlineStackContainerTransitionFraction, storiesInset: storiesInset, transition: transition)
         
         if supportNarrowListPeerId != nil {
             let topEdge: EdgeEffectView
@@ -2068,7 +2069,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             topEdge.frame = topEdgeFrame
             topEdge.update(content: self.presentationData.theme.chatList.backgroundColor, rect: topEdgeFrame, edge: .top, edgeSize: topEdgeFrame.height, transition: .immediate)
         }
-        self.supportNarrowListTopEdge?.isHidden = supportNarrowListPeerId == nil
+        self.supportNarrowListTopEdge?.isHidden = supportNarrowListPeerId == nil || supportNarrowListIsRevealed
         
         if let inlineStackContainerNode = self.inlineStackContainerNode {
             var inlineStackContainerNodeTransition = transition

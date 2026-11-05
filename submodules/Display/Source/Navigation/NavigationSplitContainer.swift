@@ -19,6 +19,13 @@ public func splitMasterWidth(containerSize: CGSize, division: CGRect?) -> CGFloa
     return min(max(320.0, floor(containerSize.width / 3.0)), floor(containerSize.width / 2.0))
 }
 
+func narrowMasterSwipeCloses(offset: CGFloat, velocity: CGFloat, width: CGFloat) -> Bool {
+    if velocity > 600.0 {
+        return true
+    }
+    return offset > width / 3.0 && velocity > -600.0
+}
+
 final class NavigationSplitContainer: ASDisplayNode {
     private var theme: NavigationControllerTheme
     
@@ -29,6 +36,11 @@ final class NavigationSplitContainer: ASDisplayNode {
     private(set) var masterControllers: [ViewController] = []
     private(set) var detailControllers: [ViewController] = []
     private var masterWidthOverride: CGFloat?
+    private(set) var detailSwipeOffset: CGFloat = 0.0
+    
+    var detailSwipeIsAvailable: Bool {
+        return self.detailContainer.swipeClosesFirstController
+    }
     
     var canHaveKeyboardFocus: Bool = false {
         didSet {
@@ -66,6 +78,10 @@ final class NavigationSplitContainer: ASDisplayNode {
         self.addSubnode(self.masterContainer)
         self.addSubnode(self.detailContainer)
         self.addSubnode(self.separator)
+        
+        self.detailContainer.firstControllerSwipe = { [weak self] translation, velocity, state in
+            self?.detailSwipeUpdated(translation: translation, velocity: velocity, state: state)
+        }
     }
     
     func hasNonReadyControllers() -> Bool {
@@ -122,15 +138,56 @@ final class NavigationSplitContainer: ASDisplayNode {
         })
     }
     
+    func detailSwipeUpdated(translation: CGFloat, velocity: CGFloat, state: UIGestureRecognizer.State) {
+        guard let masterWidth = self.masterWidthOverride else {
+            return
+        }
+        let size = self.bounds.size
+        let width = size.width - masterWidth
+        let offset = max(0.0, min(width, translation))
+        switch state {
+        case .began, .changed:
+            if state == .began {
+                for controller in self.masterControllers {
+                    controller.narrowMasterRevealUpdated(true)
+                }
+            }
+            self.detailSwipeOffset = offset
+            self.updatePaneFrames(masterWidth: masterWidth, size: size, transition: .immediate)
+        case .ended, .cancelled:
+            self.detailSwipeOffset = offset
+            if state == .ended, narrowMasterSwipeCloses(offset: offset, velocity: velocity, width: width) {
+                self.detailControllers.last?.navigationBar?.backPressed()
+            }
+            for controller in self.masterControllers {
+                controller.narrowMasterRevealUpdated(false)
+            }
+            self.detailSwipeOffset = 0.0
+            if self.supernode != nil {
+                self.updatePaneFrames(masterWidth: masterWidth, size: size, transition: .animated(duration: 0.3, curve: .spring))
+            }
+        default:
+            break
+        }
+    }
+    
+    private func updatePaneFrames(masterWidth: CGFloat, size: CGSize, transition: ContainedViewLayoutTransition) {
+        let detailMinX = masterWidth + self.detailSwipeOffset
+        transition.updateFrame(node: self.masterContainer, frame: CGRect(origin: CGPoint(), size: CGSize(width: detailMinX, height: size.height)))
+        transition.updateFrame(node: self.detailContainer, frame: CGRect(origin: CGPoint(x: detailMinX, y: 0.0), size: CGSize(width: size.width - masterWidth, height: size.height)))
+        transition.updateFrame(node: self.separator, frame: CGRect(origin: CGPoint(x: detailMinX, y: 0.0), size: CGSize(width: UIScreenPixel, height: size.height)))
+    }
+    
     func update(layout: ContainerViewLayout, masterWidthOverride: CGFloat? = nil, masterControllers: [ViewController], detailControllers: [ViewController], detailsPlaceholderNode: NavigationDetailsPlaceholderNode?, transition: ContainedViewLayoutTransition) {
         self.masterWidthOverride = masterWidthOverride
+        if masterWidthOverride == nil {
+            self.detailSwipeOffset = 0.0
+        }
         let masterWidth = masterWidthOverride ?? splitMasterWidth(containerSize: layout.size, division: layout.division)
-        let masterContentWidth = masterWidthOverride != nil ? max(masterWidth, 320.0) : masterWidth
+        let masterContentWidth = masterWidthOverride != nil ? max(masterWidth, layout.size.width) : masterWidth
         let detailWidth = layout.size.width - masterWidth
         
-        transition.updateFrame(node: self.masterContainer, frame: CGRect(origin: CGPoint(), size: CGSize(width: masterWidth, height: layout.size.height)))
-        transition.updateFrame(node: self.detailContainer, frame: CGRect(origin: CGPoint(x: masterWidth, y: 0.0), size: CGSize(width: detailWidth, height: layout.size.height)))
-        transition.updateFrame(node: self.separator, frame: CGRect(origin: CGPoint(x: masterWidth, y: 0.0), size: CGSize(width: UIScreenPixel, height: layout.size.height)))
+        self.updatePaneFrames(masterWidth: masterWidth, size: layout.size, transition: transition)
         
         if let detailsPlaceholderNode {
             let needsTiling = layout.size.width > layout.size.height

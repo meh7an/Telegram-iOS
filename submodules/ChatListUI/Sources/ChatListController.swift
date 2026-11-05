@@ -197,6 +197,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
         }
     }
+    private(set) var supportNarrowListIsRevealed: Bool = false
     private var supportFollowedChatLocation: ChatLocation?
     private var supportPreviewIsMoving: Bool = false
     
@@ -283,6 +284,16 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     let globalControlPanelsContext: GlobalControlPanelsContext
     private(set) var globalControlPanelsContextState: GlobalControlPanelsContext.State?
     private var globalControlPanelsContextStateDisposable: Disposable?
+    
+    public override func narrowMasterRevealUpdated(_ isRevealed: Bool) {
+        guard self.supportNarrowListIsRevealed != isRevealed else {
+            return
+        }
+        self.supportNarrowListIsRevealed = isRevealed
+        if self.isNodeLoaded, self.supportNarrowListPeerId != nil {
+            self.chatListDisplayNode.supportNarrowListPeerUpdated()
+        }
+    }
     
     public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.isNodeLoaded {
