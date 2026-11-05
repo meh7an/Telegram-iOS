@@ -2290,6 +2290,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
         let makeActionButtonTitleNodeLayout = TextNode.asyncLayout(self.actionButtonTitleNode)
         
         let currentItem = self.layoutParams?.0
+        let previousWidth = self.layoutParams?.6.width
         let currentChatListText = self.cachedChatListText
         let currentChatListSearchResult = self.cachedChatListSearchResult
         let currentChatListQuoteSearchResult = self.cachedChatListQuoteSearchResult
@@ -4906,6 +4907,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     if let currentTextSnapshotView {
                         transition.updatePosition(layer: currentTextSnapshotView.layer, position: textNodeFrame.origin)
+                    }
+                    if item.context.supportContext != nil, let previousWidth, previousWidth != params.width {
+                        strongSelf.titleNode.recursivelyEnsureDisplaySynchronously(true)
+                        strongSelf.textNode.textNode.recursivelyEnsureDisplaySynchronously(true)
                     }
                     
                     if let trailingTextBadgeLayoutAndApply {
