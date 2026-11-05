@@ -2171,9 +2171,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         let supportAllSearchResultsPromise = self.supportAllSearchResultsPromise
         let supportRequestedReadStatePeerIds = Atomic<Set<EnginePeer.Id>>(value: Set())
         if supportSearchApplies {
-            self.supportAllSearchResultsDisposable = (context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.ApplicationSpecificPreference(key: PreferencesKeys.supportSettings))
-            |> deliverOnMainQueue).startStrict(next: { [weak self] entry in
-                let allSearchResults = (entry?.get(SupportSettings.self) ?? .default).allSearchResults
+            self.supportAllSearchResultsDisposable = (supportAllSearchResultsSignal(engine: context.engine)
+            |> deliverOnMainQueue).startStrict(next: { [weak self] allSearchResults in
                 self?.supportAllSearchResults = allSearchResults
                 supportAllSearchResultsPromise.set(allSearchResults)
             })
@@ -5903,22 +5902,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
 
     private func openSupportSearchMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {
         self.interaction.dismissInput()
-        let engine = self.context.engine
-        let allSearchResults = self.supportAllSearchResults
-        let items: [ContextMenuItem] = [
-            .action(ContextMenuActionItem(text: allSearchResults ? "Only one from chat" : "Show all messages", icon: { _ in
-                return nil
-            }, action: { _, f in
-                f(.default)
-                let _ = updateSupportSettingsInteractively(engine: engine, { settings in
-                    var settings = settings
-                    settings.allSearchResults = !allSearchResults
-                    return settings
-                }).startStandalone()
-            }))
-        ]
-        let contextController = makeContextController(presentationData: self.presentationData, source: .reference(ChatListSearchReferenceContentSource(sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
-        self.interaction.present(contextController, nil)
+        self.interaction.present(makeSupportSearchResultsMenu(engine: self.context.engine, presentationData: self.presentationData, allSearchResults: self.supportAllSearchResults, sourceNode: sourceNode, gesture: gesture), nil)
     }
 
     func openMessagesFilter(sourceNode: ASDisplayNode) {
@@ -6493,6 +6477,22 @@ private func supportSearchWalkPeerIds(_ entries: [ChatListSearchEntry]) -> [Engi
     }
     var shownPeerIds = Set<EnginePeer.Id>()
     return supportOneRowPerChat(rowPeerIds, peerId: { $0 }, isRemoved: { _ in false }, shownPeerIds: &shownPeerIds)
+}
+
+public func makeSupportSearchResultsMenu(engine: TelegramEngine, presentationData: PresentationData, allSearchResults: Bool, sourceNode: ASDisplayNode, gesture: ContextGesture?) -> ViewController {
+    let items: [ContextMenuItem] = [
+        .action(ContextMenuActionItem(text: allSearchResults ? "Only one from chat" : "Show all messages", icon: { _ in
+            return nil
+        }, action: { _, f in
+            f(.default)
+            let _ = updateSupportSettingsInteractively(engine: engine, { settings in
+                var settings = settings
+                settings.allSearchResults = !allSearchResults
+                return settings
+            }).startStandalone()
+        }))
+    ]
+    return makeContextController(presentationData: presentationData, source: .reference(ChatListSearchReferenceContentSource(sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
 }
 
 private final class ChatListSearchReferenceContentSource: ContextReferenceContentSource {

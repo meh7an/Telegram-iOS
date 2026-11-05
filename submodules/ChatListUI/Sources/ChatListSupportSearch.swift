@@ -1,4 +1,5 @@
 import Foundation
+import SwiftSignalKit
 import TelegramCore
 import AccountContext
 
@@ -26,6 +27,23 @@ func supportOneRowPerChat<Row>(_ rows: [Row], peerId: (Row) -> EnginePeer.Id, is
         }
     }
     return result
+}
+
+public func supportOneRowPerChat(messages: [EngineMessage]) -> [EngineMessage] {
+    var shownPeerIds = Set<EnginePeer.Id>()
+    return supportOneRowPerChat(messages, peerId: { message in
+        return supportSearchRowPeer(message: message)?.id ?? message.id.peerId
+    }, isRemoved: { _ in
+        return false
+    }, shownPeerIds: &shownPeerIds)
+}
+
+public func supportAllSearchResultsSignal(engine: TelegramEngine) -> Signal<Bool, NoError> {
+    return engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.ApplicationSpecificPreference(key: PreferencesKeys.supportSettings))
+    |> map { entry -> Bool in
+        return (entry?.get(SupportSettings.self) ?? .default).allSearchResults
+    }
+    |> distinctUntilChanged
 }
 
 // A message of a migrated group is drawn as its channel.

@@ -3238,6 +3238,11 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             let context = self.context
             let chatLocation = self.chatLocation
             
+            var supportGroupsResultsByChat = false
+            if context.supportContext != nil, case let .customChatContents(contents) = self.chatPresentationInterfaceState.subject, case .hashTagSearch(publicPosts: false) = contents.kind {
+                supportGroupsResultsByChat = true
+            }
+            
             let _ = inlineSearchResults.update(
                 transition: inlineSearchResultsTransition,
                 component: AnyComponent(ChatInlineSearchResultsListComponent(
@@ -3255,6 +3260,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     insets: childContentInsets,
                     inputHeight: layout.inputHeight ?? 0.0,
                     showEmptyResults: self.showListEmptyResults,
+                    supportGroupsResultsByChat: supportGroupsResultsByChat,
                     initialScrollingState: self.inlineSearchResultsScrollingState?.state,
                     messageSelected: { [weak self] message in
                         guard let self else {
@@ -3529,6 +3535,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                                 controller.updateItemNodesSearchTextHighlightStates()
                             })
                         }
+                    },
+                    present: { [weak self] controller in
+                        self?.controller?.presentInGlobalOverlay(controller)
                     }
                 )),
                 environment: {},
