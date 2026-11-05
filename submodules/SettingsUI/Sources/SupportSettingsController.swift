@@ -41,14 +41,16 @@ private final class SupportSettingsControllerArguments {
     let reloadTemplates: () -> Void
     let setRevealedTemplateFile: (String?, String?) -> Void
     let removeTemplateFile: (String) -> Void
+    let openShortcuts: () -> Void
 
-    init(updateSettings: @escaping (@escaping (SupportSettings) -> SupportSettings) -> Void, loadMore: @escaping (Int32) -> Void, importTemplates: @escaping () -> Void, reloadTemplates: @escaping () -> Void, setRevealedTemplateFile: @escaping (String?, String?) -> Void, removeTemplateFile: @escaping (String) -> Void) {
+    init(updateSettings: @escaping (@escaping (SupportSettings) -> SupportSettings) -> Void, loadMore: @escaping (Int32) -> Void, importTemplates: @escaping () -> Void, reloadTemplates: @escaping () -> Void, setRevealedTemplateFile: @escaping (String?, String?) -> Void, removeTemplateFile: @escaping (String) -> Void, openShortcuts: @escaping () -> Void) {
         self.updateSettings = updateSettings
         self.loadMore = loadMore
         self.importTemplates = importTemplates
         self.reloadTemplates = reloadTemplates
         self.setRevealedTemplateFile = setRevealedTemplateFile
         self.removeTemplateFile = removeTemplateFile
+        self.openShortcuts = openShortcuts
     }
 }
 
@@ -60,6 +62,7 @@ private enum SupportSettingsSection: Int32 {
     case beside
     case period
     case loading
+    case shortcuts
     case templates
 }
 
@@ -81,6 +84,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         case periodInfo
         case loadMore
         case loadMoreInfo
+        case shortcuts
         case templatesHeader
         case templatesAutocomplete
         case templatesImport
@@ -105,6 +109,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
     case periodInfo(String)
     case loadMore(title: String, holeTimestamp: Int32?)
     case loadMoreInfo(String)
+    case shortcuts(String)
     case templatesHeader(String)
     case templatesAutocomplete(String, Bool)
     case templatesImport(String)
@@ -128,6 +133,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return SupportSettingsSection.period.rawValue
         case .loadMore, .loadMoreInfo:
             return SupportSettingsSection.loading.rawValue
+        case .shortcuts:
+            return SupportSettingsSection.shortcuts.rawValue
         case .templatesHeader, .templatesAutocomplete, .templatesImport, .templatesReload, .templatesFile, .templatesInfo:
             return SupportSettingsSection.templates.rawValue
         }
@@ -167,6 +174,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return .loadMore
         case .loadMoreInfo:
             return .loadMoreInfo
+        case .shortcuts:
+            return .shortcuts
         case .templatesHeader:
             return .templatesHeader
         case .templatesAutocomplete:
@@ -216,16 +225,18 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return 101
         case .loadMoreInfo:
             return 102
-        case .templatesHeader:
+        case .shortcuts:
             return 103
-        case .templatesAutocomplete:
+        case .templatesHeader:
             return 104
-        case .templatesImport:
+        case .templatesAutocomplete:
             return 105
-        case .templatesReload:
+        case .templatesImport:
             return 106
+        case .templatesReload:
+            return 107
         case let .templatesFile(index, _, _, _):
-            return 107 + index
+            return 108 + index
         case .templatesInfo:
             return Int32.max
         }
@@ -302,6 +313,10 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             })
         case let .fixChatsOrderInfo(text), let .quietInfo(text), let .besideInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+        case let .shortcuts(title):
+            return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: title, label: "", sectionId: self.section, style: .blocks, action: {
+                arguments.openShortcuts()
+            })
         case let .templatesHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .templatesAutocomplete(title, value):
@@ -353,7 +368,7 @@ private func supportTemplatesStateSignal(manager: SupportTemplatesManager?) -> S
     }
 }
 
-private func supportSettingsEntries(presentationData: PresentationData, settings: SupportSettings, loadState: SupportChatListLoadState, templates: SupportTemplatesState?, revealedTemplateFile: String?) -> [SupportSettingsEntry] {
+private func supportSettingsEntries(presentationData: PresentationData, settings: SupportSettings, loadState: SupportChatListLoadState, templates: SupportTemplatesState?, revealedTemplateFile: String?, hasHardwareKeyboard: Bool) -> [SupportSettingsEntry] {
     var entries: [SupportSettingsEntry] = []
 
     entries.append(.switchHeader("AFTER SENDING"))
@@ -393,6 +408,10 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
         entries.append(.loadMoreInfo("Chats are loaded back to \(date)."))
     }
 
+    if hasHardwareKeyboard {
+        entries.append(.shortcuts("Keyboard Shortcuts"))
+    }
+
     if let templates {
         entries.append(.templatesHeader("TEMPLATES"))
         entries.append(.templatesAutocomplete("Enable templates autocomplete", settings.templatesAutocomplete))
@@ -417,6 +436,7 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
 
 public func supportSettingsController(context: AccountContext) -> ViewController {
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
 
     let showTemplatesResult: (SupportTemplatesReloadResult, String) -> Void = { result, successText in
         supportPresentTemplatesReloadResult(context: context, result: result, successText: successText, elevatedLayout: false, present: { controller in
@@ -462,6 +482,8 @@ public func supportSettingsController(context: AccountContext) -> ViewController
         }), TextAlertAction(type: .destructiveAction, title: "Remove", action: {
             context.supportTemplates?.removeFile(name: name)
         })]), nil)
+    }, openShortcuts: {
+        pushControllerImpl?(supportShortcutsController(context: context))
     })
 
     let settings = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.ApplicationSpecificPreference(key: PreferencesKeys.supportSettings))
@@ -474,11 +496,12 @@ public func supportSettingsController(context: AccountContext) -> ViewController
         settings,
         context.engine.messages.supportChatListLoadState(),
         supportTemplatesStateSignal(manager: context.supportTemplates),
-        revealedTemplateFilePromise.get()
+        revealedTemplateFilePromise.get(),
+        supportHardwareKeyboardIsConnected()
     )
-    |> map { presentationData, settings, loadState, templates, revealedTemplateFile -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, settings, loadState, templates, revealedTemplateFile, hasHardwareKeyboard -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Support Settings"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: supportSettingsEntries(presentationData: presentationData, settings: settings, loadState: loadState, templates: templates, revealedTemplateFile: revealedTemplateFile), style: .blocks)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: supportSettingsEntries(presentationData: presentationData, settings: settings, loadState: loadState, templates: templates, revealedTemplateFile: revealedTemplateFile, hasHardwareKeyboard: hasHardwareKeyboard), style: .blocks)
 
         return (controllerState, (listState, arguments))
     }
@@ -486,6 +509,9 @@ public func supportSettingsController(context: AccountContext) -> ViewController
     let controller = ItemListController(context: context, state: signal)
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
+    }
+    pushControllerImpl = { [weak controller] c in
+        controller?.push(c)
     }
     return controller
 }

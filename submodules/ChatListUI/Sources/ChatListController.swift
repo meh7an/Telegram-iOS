@@ -3848,18 +3848,18 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             contextController.dismissWithoutContent()
             self.chatListDisplayNode.mainContainerNode.peerSelected?(peer, nil, true, true, nil)
         }
-        contextController.additionalKeyShortcuts = [
-            KeyShortcut(input: UIKeyCommand.inputUpArrow, modifiers: [.alternate], wantsPriorityOverText: true, action: { [weak self, weak contextController] in
-                if let self, let contextController {
-                    self.supportMovePreview(contextController: contextController, peerId: peerId, downward: false)
-                }
-            }),
-            KeyShortcut(input: UIKeyCommand.inputDownArrow, modifiers: [.alternate], wantsPriorityOverText: true, action: { [weak self, weak contextController] in
-                if let self, let contextController {
-                    self.supportMovePreview(contextController: contextController, peerId: peerId, downward: true)
-                }
-            })
-        ]
+        guard let supportContext = self.context.supportContext else {
+            return
+        }
+        contextController.additionalKeyShortcuts = supportKeyShortcuts(combos: supportContext.shortcutCombos(.previousChat), title: nil, wantsPriorityOverText: true, perform: { [weak self, weak contextController] in
+            if let self, let contextController {
+                self.supportMovePreview(contextController: contextController, peerId: peerId, downward: false)
+            }
+        }) + supportKeyShortcuts(combos: supportContext.shortcutCombos(.nextChat), title: nil, wantsPriorityOverText: true, perform: { [weak self, weak contextController] in
+            if let self, let contextController {
+                self.supportMovePreview(contextController: contextController, peerId: peerId, downward: true)
+            }
+        })
     }
     
     private func supportMovePreview(contextController: ContextController, peerId: EnginePeer.Id, downward: Bool) {
@@ -5121,24 +5121,25 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
         
         var supportShortcuts: [KeyShortcut] = []
-        if self.context.supportContext != nil {
+        if let supportContext = self.context.supportContext {
             supportShortcuts.append(contentsOf: supportTemplatesReloadKeyShortcuts(context: self.context, present: { [weak self] controller in
                 self?.present(controller, in: .window(.root))
             }))
-            supportShortcuts.append(KeyShortcut(title: "Show Current Chat in List", input: "L", modifiers: [.control, .shift], action: { [weak self] in
+            supportShortcuts.append(contentsOf: supportKeyShortcuts(combos: supportContext.shortcutCombos(.previousChat), title: nil, perform: { [weak self] in
+                self?.chatListDisplayNode.effectiveContainerNode.currentItemNode.selectChat(.previous(unread: false))
+            }))
+            supportShortcuts.append(contentsOf: supportKeyShortcuts(combos: supportContext.shortcutCombos(.nextChat), title: nil, perform: { [weak self] in
+                self?.chatListDisplayNode.effectiveContainerNode.currentItemNode.selectChat(.next(unread: false))
+            }))
+            supportShortcuts.append(contentsOf: supportKeyShortcuts(combos: supportContext.shortcutCombos(.showCurrentChat), title: supportShortcutTitle(.showCurrentChat), perform: { [weak self] in
                 self?.chatListDisplayNode.effectiveContainerNode.currentItemNode.scrollToHighlightedChat()
             }))
-            supportShortcuts.append(KeyShortcut(input: "L", modifiers: [.command, .shift], action: { [weak self] in
-                self?.chatListDisplayNode.effectiveContainerNode.currentItemNode.scrollToHighlightedChat()
-            }))
-            let openAbuseBot: () -> Void = { [weak self] in
+            supportShortcuts.append(contentsOf: supportKeyShortcuts(combos: supportContext.shortcutCombos(.openAbuseBot), title: supportShortcutTitle(.openAbuseBot), perform: { [weak self] in
                 guard let self, self.supportListIsOnScreen, self.context.supportContext?.allowsHardwarePress(of: .openAbuseBot) == true else {
                     return
                 }
                 self.openSupportAbuseBot()
-            }
-            supportShortcuts.append(KeyShortcut(title: "Open Abuse Bot", input: "A", modifiers: [.control, .shift], action: openAbuseBot))
-            supportShortcuts.append(KeyShortcut(input: "A", modifiers: [.command, .shift], action: openAbuseBot))
+            }))
         }
 
         return inputShortcuts + folderShortcuts + chatShortcuts + supportShortcuts

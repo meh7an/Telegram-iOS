@@ -61,7 +61,7 @@ extension ChatControllerImpl {
                 }),
                 KeyShortcut(input: "M", modifiers: [.shift, .command], action: { [weak self] in
                     if let strongSelf = self {
-                        if strongSelf.supportMutesOnMonospaceKey() {
+                        if strongSelf.supportPerformsShortcut(insteadOfFormatKey: "M") {
                             return
                         }
                         if strongSelf.chatDisplayNode.textInputPanelNode?.performNativeFormatShortcut(.monospace) == true {
@@ -90,7 +90,7 @@ extension ChatControllerImpl {
                 }),
                 KeyShortcut(input: "X", modifiers: [.command, .shift], action: { [weak self] in
                     if let strongSelf = self {
-                        if strongSelf.supportMovesBackOnStrikethroughKey() {
+                        if strongSelf.supportPerformsShortcut(insteadOfFormatKey: "X") {
                             return
                         }
                         if strongSelf.chatDisplayNode.textInputPanelNode?.performNativeFormatShortcut(.strikethrough) == true {
@@ -353,48 +353,17 @@ extension ChatControllerImpl {
         ]
         
         var supportShortcuts: [KeyShortcut] = []
-        if self.context.supportContext != nil {
-            supportShortcuts.append(contentsOf: supportTemplatesReloadKeyShortcuts(context: self.context, present: { [weak self] controller in
-                self?.present(controller, in: .window(.root))
-            }))
-            supportShortcuts.append(KeyShortcut(title: "Mute or Unmute Chat", input: "M", modifiers: [.control, .shift], action: { [weak self] in
-                self?.supportToggleMuted()
-            }))
-            if !self.chatDisplayNode.isInputViewFocused {
-                supportShortcuts.append(KeyShortcut(input: "M", modifiers: [.command, .shift], action: { [weak self] in
-                    self?.supportToggleMuted()
-                }))
-            }
-            supportShortcuts.append(KeyShortcut(title: "Send and Stay", input: "\r", modifiers: [.control, .shift], action: { [weak self] in
-                self?.supportSendAndStay()
-            }))
-            supportShortcuts.append(KeyShortcut(input: "\r", modifiers: [.command, .shift], action: { [weak self] in
-                self?.supportSendAndStay()
-            }))
-            supportShortcuts.append(KeyShortcut(input: UIKeyCommand.inputEscape, action: { [weak self] in
-                self?.supportEscape()
-            }))
-            if self.supportOccupationPeerId != nil {
-                supportShortcuts.append(KeyShortcut(input: UIKeyCommand.inputUpArrow, modifiers: [.alternate], wantsPriorityOverText: true, action: { [weak self] in
-                    self?.supportMoveThroughChatList(downward: false)
-                }))
-                supportShortcuts.append(KeyShortcut(input: UIKeyCommand.inputDownArrow, modifiers: [.alternate], wantsPriorityOverText: true, action: { [weak self] in
-                    self?.supportMoveThroughChatList(downward: true)
-                }))
-                supportShortcuts.append(KeyShortcut(title: "Previous Opened Chat", input: "X", modifiers: [.control, .shift], action: { [weak self] in
-                    self?.supportMoveThroughChatHistory(steps: -1)
-                }))
-                supportShortcuts.append(KeyShortcut(title: "Next Opened Chat", input: "C", modifiers: [.control, .shift], action: { [weak self] in
-                    self?.supportMoveThroughChatHistory(steps: 1)
-                }))
-                supportShortcuts.append(KeyShortcut(input: "C", modifiers: [.command, .shift], action: { [weak self] in
-                    self?.supportMoveThroughChatHistory(steps: 1)
-                }))
-                if !self.chatDisplayNode.isInputViewFocused {
-                    supportShortcuts.append(KeyShortcut(input: "X", modifiers: [.command, .shift], action: { [weak self] in
-                        self?.supportMoveThroughChatHistory(steps: -1)
-                    }))
+        if let supportContext = self.context.supportContext {
+            let inputIsFocused = self.chatDisplayNode.isInputViewFocused
+            for action in self.supportShortcutActions {
+                var combos = supportContext.shortcutCombos(action)
+                if inputIsFocused {
+                    combos = combos.filter { !supportKeyComboIsFormatKey($0) }
                 }
+                let isListWalk = action == .previousChat || action == .nextChat
+                supportShortcuts.append(contentsOf: supportKeyShortcuts(combos: combos, title: (isListWalk || action == .closeChat) ? nil : supportShortcutTitle(action), wantsPriorityOverText: isListWalk, perform: { [weak self] in
+                    self?.supportPerformShortcut(action)
+                }))
             }
         }
 

@@ -40,6 +40,7 @@ public final class SupportContext {
     private let inAppNotificationsValue = Atomic<Bool>(value: false)
     private let chatListBesideValue = Atomic<SupportChatListBeside>(value: .off)
     private let chatListBesidePromise = ValuePromise<SupportChatListBeside>(.off, ignoreRepeated: true)
+    private let shortcutOverridesValue = Atomic<[SupportShortcutOverride]>(value: [])
     private let supportNamePromise = ValuePromise<String>(ignoreRepeated: true)
     private let userInfoState = Atomic(value: UserInfoState())
     private let userInfoUpdated = ValuePipe<PeerId>()
@@ -144,6 +145,14 @@ public final class SupportContext {
         return self.chatListBesideValue.with { $0 }
     }
     
+    public var currentShortcutOverrides: [SupportShortcutOverride] {
+        return self.shortcutOverridesValue.with { $0 }
+    }
+    
+    public func shortcutCombos(_ action: SupportShortcutAction) -> [SupportKeyCombo] {
+        return supportShortcutCombos(action, overrides: self.shortcutOverridesValue.with { $0 })
+    }
+    
     init(settings: Signal<SupportSettings, NoError>) {
         self.settingsDisposable = (settings
         |> map { settings -> Int32 in
@@ -164,6 +173,7 @@ public final class SupportContext {
             let _ = self.automaticMediaDownloadValue.swap(settings.automaticMediaDownload)
             let _ = self.inAppNotificationsValue.swap(settings.inAppNotifications)
             let _ = self.chatListBesideValue.swap(settings.chatListBeside)
+            let _ = self.shortcutOverridesValue.swap(settings.shortcutOverrides)
             self.chatListBesidePromise.set(settings.chatListBeside)
             self.automaticMediaDownloadPromise.set(settings.automaticMediaDownload)
         })

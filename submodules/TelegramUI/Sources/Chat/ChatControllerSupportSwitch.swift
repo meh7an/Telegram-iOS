@@ -1,4 +1,5 @@
 import Foundation
+import Display
 import SwiftSignalKit
 import TelegramCore
 import AccountContext
@@ -122,19 +123,48 @@ extension ChatControllerImpl {
         return false
     }
 
-    func supportMutesOnMonospaceKey() -> Bool {
-        guard self.context.supportContext != nil, !self.supportComposerHasSelection else {
-            return false
+    var supportShortcutActions: [SupportShortcutAction] {
+        var actions: [SupportShortcutAction] = [.muteChat, .sendAndStay, .closeChat, .reloadTemplates]
+        if self.supportOccupationPeerId != nil {
+            actions.append(contentsOf: [.previousChat, .nextChat, .previousOpenedChat, .nextOpenedChat])
         }
-        self.supportToggleMuted()
-        return true
+        return actions
     }
 
-    func supportMovesBackOnStrikethroughKey() -> Bool {
-        guard self.context.supportContext != nil, self.supportOccupationPeerId != nil, !self.supportComposerHasSelection else {
+    func supportPerformShortcut(_ action: SupportShortcutAction) {
+        switch action {
+        case .muteChat:
+            self.supportToggleMuted()
+        case .sendAndStay:
+            self.supportSendAndStay()
+        case .closeChat:
+            self.supportEscape()
+        case .reloadTemplates:
+            supportReloadTemplatesAction(context: self.context, present: { [weak self] controller in
+                self?.present(controller, in: .window(.root))
+            })()
+        case .previousChat:
+            self.supportMoveThroughChatList(downward: false)
+        case .nextChat:
+            self.supportMoveThroughChatList(downward: true)
+        case .previousOpenedChat:
+            self.supportMoveThroughChatHistory(steps: -1)
+        case .nextOpenedChat:
+            self.supportMoveThroughChatHistory(steps: 1)
+        case .showCurrentChat, .openAbuseBot:
+            break
+        }
+    }
+
+    func supportPerformsShortcut(insteadOfFormatKey key: String) -> Bool {
+        guard let supportContext = self.context.supportContext, !self.supportComposerHasSelection else {
             return false
         }
-        self.supportMoveThroughChatHistory(steps: -1)
+        let combo = SupportKeyCombo(key: key, modifiers: [.command, .shift])
+        guard let action = self.supportShortcutActions.first(where: { supportContext.shortcutCombos($0).contains(combo) }) else {
+            return false
+        }
+        self.supportPerformShortcut(action)
         return true
     }
 

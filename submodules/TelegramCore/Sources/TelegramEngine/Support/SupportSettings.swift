@@ -38,6 +38,7 @@ public struct SupportSettings: Codable, Equatable {
     public var automaticMediaDownload: Bool
     public var inAppNotifications: Bool
     public var chatListBeside: SupportChatListBeside
+    public var shortcutOverrides: [SupportShortcutOverride] = []
 
     public init(switchBehavior: SupportSwitchBehavior, fixChatsOrder: Bool, templatesAutocomplete: Bool, chatLoadPeriod: Int32, allSearchResults: Bool, sendAllSilently: Bool, automaticMediaDownload: Bool, inAppNotifications: Bool, chatListBeside: SupportChatListBeside = .off) {
         self.switchBehavior = switchBehavior
@@ -64,6 +65,7 @@ public struct SupportSettings: Codable, Equatable {
         self.automaticMediaDownload = try container.decodeIfPresent(Bool.self, forKey: "automaticMediaDownload") ?? defaults.automaticMediaDownload
         self.inAppNotifications = try container.decodeIfPresent(Bool.self, forKey: "inAppNotifications") ?? defaults.inAppNotifications
         self.chatListBeside = (try container.decodeIfPresent(Int32.self, forKey: "chatListBeside")).flatMap(SupportChatListBeside.init(rawValue:)) ?? defaults.chatListBeside
+        self.shortcutOverrides = try container.decodeIfPresent([SupportShortcutOverride].self, forKey: "shortcutOverrides") ?? defaults.shortcutOverrides
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -78,6 +80,7 @@ public struct SupportSettings: Codable, Equatable {
         try container.encode(self.automaticMediaDownload, forKey: "automaticMediaDownload")
         try container.encode(self.inAppNotifications, forKey: "inAppNotifications")
         try container.encode(self.chatListBeside.rawValue, forKey: "chatListBeside")
+        try container.encode(self.shortcutOverrides, forKey: "shortcutOverrides")
     }
 }
 
