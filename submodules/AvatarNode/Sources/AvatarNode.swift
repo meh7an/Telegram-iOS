@@ -881,7 +881,7 @@ public final class AvatarNode: ASDisplayNode {
                     representation = nil
                     icon = .supportAbuseBotIcon
                 }
-            } else if peer?.restrictionText(platform: "ios", contentSettings: genericContext.currentContentSettings.with { $0 }) == nil {
+            } else if peer?.restrictionText(platform: "ios", contentSettings: genericContext.currentContentSettings.with { $0 }) == nil, genericContext.supportContext?.currentHideProfilePhotos != true {
                 representation = peer?.smallProfileImage
             }
             
@@ -1378,6 +1378,10 @@ public final class AvatarNode: ASDisplayNode {
         displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0),
         storeUnrounded: Bool = false
     ) {
+        if genericContext.supportContext?.currentHideProfilePhotos == true {
+            self.setPeer(context: genericContext, theme: theme, peer: peer, authorOfMessage: authorOfMessage, overrideImage: overrideImage, emptyColor: emptyColor, clipStyle: clipStyle, synchronousLoad: synchronousLoad, displayDimensions: displayDimensions, storeUnrounded: storeUnrounded)
+            return
+        }
         self.contentNode.setPeerV2(
             context: genericContext,
             theme: theme,

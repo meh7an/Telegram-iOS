@@ -40,6 +40,7 @@ public struct SupportSettings: Codable, Equatable {
     public var chatListBeside: SupportChatListBeside
     public var shortcutOverrides: [SupportShortcutOverride] = []
     public var trailingTags: Bool = true
+    public var hideProfilePhotos: Bool = false
 
     public init(switchBehavior: SupportSwitchBehavior, fixChatsOrder: Bool, templatesAutocomplete: Bool, chatLoadPeriod: Int32, allSearchResults: Bool, sendAllSilently: Bool, automaticMediaDownload: Bool, inAppNotifications: Bool, chatListBeside: SupportChatListBeside = .off) {
         self.switchBehavior = switchBehavior
@@ -68,6 +69,7 @@ public struct SupportSettings: Codable, Equatable {
         self.chatListBeside = (try container.decodeIfPresent(Int32.self, forKey: "chatListBeside")).flatMap(SupportChatListBeside.init(rawValue:)) ?? defaults.chatListBeside
         self.shortcutOverrides = try container.decodeIfPresent([SupportShortcutOverride].self, forKey: "shortcutOverrides") ?? defaults.shortcutOverrides
         self.trailingTags = try container.decodeIfPresent(Bool.self, forKey: "trailingTags") ?? defaults.trailingTags
+        self.hideProfilePhotos = try container.decodeIfPresent(Bool.self, forKey: "hideProfilePhotos") ?? defaults.hideProfilePhotos
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -84,6 +86,7 @@ public struct SupportSettings: Codable, Equatable {
         try container.encode(self.chatListBeside.rawValue, forKey: "chatListBeside")
         try container.encode(self.shortcutOverrides, forKey: "shortcutOverrides")
         try container.encode(self.trailingTags, forKey: "trailingTags")
+        try container.encode(self.hideProfilePhotos, forKey: "hideProfilePhotos")
     }
 }
 

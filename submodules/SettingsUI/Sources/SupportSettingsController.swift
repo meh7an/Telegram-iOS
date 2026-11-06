@@ -77,6 +77,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         case fixChatsOrder
         case fixChatsOrderInfo
         case automaticMediaDownload
+        case hideProfilePhotos
         case inAppNotifications
         case quietInfo
         case trailingTags
@@ -104,6 +105,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
     case fixChatsOrder(String, Bool)
     case fixChatsOrderInfo(String)
     case automaticMediaDownload(String, Bool)
+    case hideProfilePhotos(String, Bool)
     case inAppNotifications(String, Bool)
     case quietInfo(String)
     case trailingTags(String, Bool)
@@ -132,7 +134,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return SupportSettingsSection.sending.rawValue
         case .fixChatsOrder, .fixChatsOrderInfo:
             return SupportSettingsSection.order.rawValue
-        case .automaticMediaDownload, .inAppNotifications, .quietInfo:
+        case .automaticMediaDownload, .hideProfilePhotos, .inAppNotifications, .quietInfo:
             return SupportSettingsSection.quiet.rawValue
         case .trailingTags, .trailingTagsInfo:
             return SupportSettingsSection.tags.rawValue
@@ -163,6 +165,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return .fixChatsOrderInfo
         case .automaticMediaDownload:
             return .automaticMediaDownload
+        case .hideProfilePhotos:
+            return .hideProfilePhotos
         case .inAppNotifications:
             return .inAppNotifications
         case .quietInfo:
@@ -218,24 +222,26 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return 6
         case .automaticMediaDownload:
             return 7
-        case .inAppNotifications:
+        case .hideProfilePhotos:
             return 8
-        case .quietInfo:
+        case .inAppNotifications:
             return 9
-        case .trailingTags:
+        case .quietInfo:
             return 10
-        case .trailingTagsInfo:
+        case .trailingTags:
             return 11
-        case .besideHeader:
+        case .trailingTagsInfo:
             return 12
+        case .besideHeader:
+            return 13
         case let .beside(index, _, _, _):
-            return 13 + index
+            return 14 + index
         case .besideInfo:
-            return 16
-        case .periodHeader:
             return 17
+        case .periodHeader:
+            return 18
         case let .period(index, _, _, _):
-            return 18 + index
+            return 19 + index
         case .periodInfo:
             return 100
         case .loadMore:
@@ -297,6 +303,14 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                 arguments.updateSettings { settings in
                     var settings = settings
                     settings.automaticMediaDownload = value
+                    return settings
+                }
+            })
+        case let .hideProfilePhotos(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateSettings { settings in
+                    var settings = settings
+                    settings.hideProfilePhotos = value
                     return settings
                 }
             })
@@ -405,8 +419,9 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
     entries.append(.fixChatsOrderInfo("Chats keep their place while messages arrive. Pinning a chat or restarting the app re-sorts the list."))
 
     entries.append(.automaticMediaDownload("Auto-download media", settings.automaticMediaDownload))
+    entries.append(.hideProfilePhotos("Hide profile photos", settings.hideProfilePhotos))
     entries.append(.inAppNotifications("In-app notifications", settings.inAppNotifications))
-    entries.append(.quietInfo("These apply to this account only. With auto-download off, media loads when you tap it. With notifications off, new messages play no sound and show no banner while the app is open."))
+    entries.append(.quietInfo("These apply to this account only. With auto-download off, media loads when you tap it. With profile photos hidden, everyone shows their initials and no photos are downloaded. With notifications off, new messages play no sound and show no banner while the app is open."))
 
     entries.append(.trailingTags("Show tags under messages", settings.trailingTags))
     entries.append(.trailingTagsInfo("Hashtags at the end of an incoming message show as tags under it, in one row you can expand. With this off, they stay in the message text."))

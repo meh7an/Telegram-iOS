@@ -109,6 +109,21 @@ final class SupportSettingsTests: XCTestCase {
         XCTAssertFalse(context.currentTrailingTags)
     }
 
+    func testProfilePhotosAreShownByDefaultAndFollowTheSettings() {
+        XCTAssertFalse(SupportSettings.default.hideProfilePhotos)
+        XCTAssertEqual(PreferencesEntry(PartialSettings(sendAllSilently: true))?.get(SupportSettings.self)?.hideProfilePhotos, false)
+
+        var settings = SupportSettings.default
+        settings.hideProfilePhotos = true
+        XCTAssertEqual(PreferencesEntry(settings)?.get(SupportSettings.self)?.hideProfilePhotos, true)
+
+        let promise = ValuePromise<SupportSettings>(.default)
+        let context = SupportContext(settings: promise.get())
+        XCTAssertFalse(context.currentHideProfilePhotos)
+        promise.set(settings)
+        XCTAssertTrue(context.currentHideProfilePhotos)
+    }
+
     func testMissingValuesTakeTheirDefaults() {
         var expected = SupportSettings.default
         expected.sendAllSilently = true

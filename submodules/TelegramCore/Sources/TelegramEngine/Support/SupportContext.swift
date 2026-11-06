@@ -42,6 +42,7 @@ public final class SupportContext {
     private let chatListBesidePromise = ValuePromise<SupportChatListBeside>(.off, ignoreRepeated: true)
     private let shortcutOverridesValue = Atomic<[SupportShortcutOverride]>(value: [])
     private let trailingTagsValue = Atomic<Bool>(value: SupportSettings.default.trailingTags)
+    private let hideProfilePhotosValue = Atomic<Bool>(value: SupportSettings.default.hideProfilePhotos)
     private let supportNamePromise = ValuePromise<String>(ignoreRepeated: true)
     private let userInfoState = Atomic(value: UserInfoState())
     private let userInfoUpdated = ValuePipe<PeerId>()
@@ -154,6 +155,10 @@ public final class SupportContext {
         return self.trailingTagsValue.with { $0 }
     }
     
+    public var currentHideProfilePhotos: Bool {
+        return self.hideProfilePhotosValue.with { $0 }
+    }
+    
     public func shortcutCombos(_ action: SupportShortcutAction) -> [SupportKeyCombo] {
         return supportShortcutCombos(action, overrides: self.shortcutOverridesValue.with { $0 })
     }
@@ -180,6 +185,7 @@ public final class SupportContext {
             let _ = self.chatListBesideValue.swap(settings.chatListBeside)
             let _ = self.shortcutOverridesValue.swap(settings.shortcutOverrides)
             let _ = self.trailingTagsValue.swap(settings.trailingTags)
+            let _ = self.hideProfilePhotosValue.swap(settings.hideProfilePhotos)
             self.chatListBesidePromise.set(settings.chatListBeside)
             self.automaticMediaDownloadPromise.set(settings.automaticMediaDownload)
         })
