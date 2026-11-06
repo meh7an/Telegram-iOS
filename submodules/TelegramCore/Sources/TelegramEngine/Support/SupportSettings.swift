@@ -41,6 +41,7 @@ public struct SupportSettings: Codable, Equatable {
     public var shortcutOverrides: [SupportShortcutOverride] = []
     public var trailingTags: Bool = true
     public var hideProfilePhotos: Bool = false
+    public var hideKeyboardOnSwitch: Bool = true
 
     public init(switchBehavior: SupportSwitchBehavior, fixChatsOrder: Bool, templatesAutocomplete: Bool, chatLoadPeriod: Int32, allSearchResults: Bool, sendAllSilently: Bool, automaticMediaDownload: Bool, inAppNotifications: Bool, chatListBeside: SupportChatListBeside = .off) {
         self.switchBehavior = switchBehavior
@@ -70,6 +71,7 @@ public struct SupportSettings: Codable, Equatable {
         self.shortcutOverrides = try container.decodeIfPresent([SupportShortcutOverride].self, forKey: "shortcutOverrides") ?? defaults.shortcutOverrides
         self.trailingTags = try container.decodeIfPresent(Bool.self, forKey: "trailingTags") ?? defaults.trailingTags
         self.hideProfilePhotos = try container.decodeIfPresent(Bool.self, forKey: "hideProfilePhotos") ?? defaults.hideProfilePhotos
+        self.hideKeyboardOnSwitch = try container.decodeIfPresent(Bool.self, forKey: "hideKeyboardOnSwitch") ?? defaults.hideKeyboardOnSwitch
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -87,6 +89,7 @@ public struct SupportSettings: Codable, Equatable {
         try container.encode(self.shortcutOverrides, forKey: "shortcutOverrides")
         try container.encode(self.trailingTags, forKey: "trailingTags")
         try container.encode(self.hideProfilePhotos, forKey: "hideProfilePhotos")
+        try container.encode(self.hideKeyboardOnSwitch, forKey: "hideKeyboardOnSwitch")
     }
 }
 

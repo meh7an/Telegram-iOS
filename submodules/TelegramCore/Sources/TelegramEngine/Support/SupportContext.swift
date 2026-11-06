@@ -43,6 +43,8 @@ public final class SupportContext {
     private let shortcutOverridesValue = Atomic<[SupportShortcutOverride]>(value: [])
     private let trailingTagsValue = Atomic<Bool>(value: SupportSettings.default.trailingTags)
     private let hideProfilePhotosValue = Atomic<Bool>(value: SupportSettings.default.hideProfilePhotos)
+    private let hideKeyboardOnSwitchValue = Atomic<Bool>(value: SupportSettings.default.hideKeyboardOnSwitch)
+    private let composerFocusSkip = Atomic<(peerId: PeerId, until: Double)?>(value: nil)
     private let supportNamePromise = ValuePromise<String>(ignoreRepeated: true)
     private let userInfoState = Atomic(value: UserInfoState())
     private let userInfoUpdated = ValuePipe<PeerId>()
@@ -159,6 +161,27 @@ public final class SupportContext {
         return self.hideProfilePhotosValue.with { $0 }
     }
     
+    public var currentHideKeyboardOnSwitch: Bool {
+        return self.hideKeyboardOnSwitchValue.with { $0 }
+    }
+    
+    // A switch that keeps the keyboard closed: the chat it opens skips the composer focus a support chat takes on open.
+    public func skipComposerFocus(peerId: PeerId, now: Double = CFAbsoluteTimeGetCurrent()) {
+        let _ = self.composerFocusSkip.swap((peerId, now + 2.0))
+    }
+    
+    public func takeComposerFocusSkip(peerId: PeerId, now: Double = CFAbsoluteTimeGetCurrent()) -> Bool {
+        var result = false
+        let _ = self.composerFocusSkip.modify { current in
+            guard let current, current.peerId == peerId else {
+                return current
+            }
+            result = now < current.until
+            return nil
+        }
+        return result
+    }
+    
     public func shortcutCombos(_ action: SupportShortcutAction) -> [SupportKeyCombo] {
         return supportShortcutCombos(action, overrides: self.shortcutOverridesValue.with { $0 })
     }
@@ -186,6 +209,7 @@ public final class SupportContext {
             let _ = self.shortcutOverridesValue.swap(settings.shortcutOverrides)
             let _ = self.trailingTagsValue.swap(settings.trailingTags)
             let _ = self.hideProfilePhotosValue.swap(settings.hideProfilePhotos)
+            let _ = self.hideKeyboardOnSwitchValue.swap(settings.hideKeyboardOnSwitch)
             self.chatListBesidePromise.set(settings.chatListBeside)
             self.automaticMediaDownloadPromise.set(settings.automaticMediaDownload)
         })

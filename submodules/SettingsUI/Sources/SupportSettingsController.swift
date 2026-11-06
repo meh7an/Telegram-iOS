@@ -74,6 +74,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         case switchHeader
         case switchBehavior(Int32)
         case sendSilently
+        case hideKeyboardOnSwitch
+        case hideKeyboardOnSwitchInfo
         case fixChatsOrder
         case fixChatsOrderInfo
         case automaticMediaDownload
@@ -102,6 +104,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
     case switchHeader(String)
     case switchBehavior(index: Int32, behavior: SupportSwitchBehavior, title: String, isSelected: Bool)
     case sendSilently(String, Bool)
+    case hideKeyboardOnSwitch(String, Bool)
+    case hideKeyboardOnSwitchInfo(String)
     case fixChatsOrder(String, Bool)
     case fixChatsOrderInfo(String)
     case automaticMediaDownload(String, Bool)
@@ -130,7 +134,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         switch self {
         case .switchHeader, .switchBehavior:
             return SupportSettingsSection.switching.rawValue
-        case .sendSilently:
+        case .sendSilently, .hideKeyboardOnSwitch, .hideKeyboardOnSwitchInfo:
             return SupportSettingsSection.sending.rawValue
         case .fixChatsOrder, .fixChatsOrderInfo:
             return SupportSettingsSection.order.rawValue
@@ -159,6 +163,10 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return .switchBehavior(behavior.rawValue)
         case .sendSilently:
             return .sendSilently
+        case .hideKeyboardOnSwitch:
+            return .hideKeyboardOnSwitch
+        case .hideKeyboardOnSwitchInfo:
+            return .hideKeyboardOnSwitchInfo
         case .fixChatsOrder:
             return .fixChatsOrder
         case .fixChatsOrderInfo:
@@ -216,32 +224,36 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return 1 + index
         case .sendSilently:
             return 4
-        case .fixChatsOrder:
+        case .hideKeyboardOnSwitch:
             return 5
-        case .fixChatsOrderInfo:
+        case .hideKeyboardOnSwitchInfo:
             return 6
-        case .automaticMediaDownload:
+        case .fixChatsOrder:
             return 7
-        case .hideProfilePhotos:
+        case .fixChatsOrderInfo:
             return 8
-        case .inAppNotifications:
+        case .automaticMediaDownload:
             return 9
-        case .quietInfo:
+        case .hideProfilePhotos:
             return 10
-        case .trailingTags:
+        case .inAppNotifications:
             return 11
-        case .trailingTagsInfo:
+        case .quietInfo:
             return 12
-        case .besideHeader:
+        case .trailingTags:
             return 13
+        case .trailingTagsInfo:
+            return 14
+        case .besideHeader:
+            return 15
         case let .beside(index, _, _, _):
-            return 14 + index
+            return 16 + index
         case .besideInfo:
-            return 17
+            return 19
         case .periodHeader:
-            return 18
+            return 20
         case let .period(index, _, _, _):
-            return 19 + index
+            return 21 + index
         case .periodInfo:
             return 100
         case .loadMore:
@@ -287,6 +299,14 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                 arguments.updateSettings { settings in
                     var settings = settings
                     settings.sendAllSilently = value
+                    return settings
+                }
+            })
+        case let .hideKeyboardOnSwitch(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateSettings { settings in
+                    var settings = settings
+                    settings.hideKeyboardOnSwitch = value
                     return settings
                 }
             })
@@ -348,7 +368,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     arguments.selectPeriod(period)
                 }
             })
-        case let .fixChatsOrderInfo(text), let .quietInfo(text), let .trailingTagsInfo(text), let .besideInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
+        case let .hideKeyboardOnSwitchInfo(text), let .fixChatsOrderInfo(text), let .quietInfo(text), let .trailingTagsInfo(text), let .besideInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .shortcuts(title):
             return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: title, label: "", sectionId: self.section, style: .blocks, action: {
@@ -414,6 +434,8 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
     }
 
     entries.append(.sendSilently("Send all messages without sound", settings.sendAllSilently))
+    entries.append(.hideKeyboardOnSwitch("Hide keyboard when switching chats", settings.hideKeyboardOnSwitch))
+    entries.append(.hideKeyboardOnSwitchInfo("Moving to another chat after sending, with Done or with the keyboard shortcuts closes the keyboard, leaving more room to read. With a hardware keyboard, typing stays in the composer."))
 
     entries.append(.fixChatsOrder("Fix chats order", settings.fixChatsOrder))
     entries.append(.fixChatsOrderInfo("Chats keep their place while messages arrive. Pinning a chat or restarting the app re-sorts the list."))
