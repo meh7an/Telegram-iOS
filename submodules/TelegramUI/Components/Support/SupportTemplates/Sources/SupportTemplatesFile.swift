@@ -59,6 +59,15 @@ private func token(of line: [UInt16]) -> String? {
     return stringFromUnits(name)
 }
 
+func valueLineText(_ line: String) -> String {
+    var units = Array(line.utf16)
+    if units.last == 0x0D {
+        units.removeLast()
+    }
+    let start = units.firstIndex(where: { !isSpaceUnit($0) }) ?? units.endIndex
+    return stringFromUnits(units[start...])
+}
+
 func readSupportTemplatesLines(_ data: Data, stateChange: (SupportTemplatesReadState) -> Void, line: (SupportTemplatesReadState, String, Bool) -> Void) {
     var state = SupportTemplatesReadState.none
     var hadKeys = false
@@ -96,7 +105,11 @@ func readSupportTemplatesLines(_ data: Data, stateChange: (SupportTemplatesReadS
                     hadKeys = true
                 }
             }
-            line(state, text, false)
+            if state == .value && !units.isEmpty {
+                line(state, valueLineText(String(decoding: lineBytes, as: UTF8.self)), false)
+            } else {
+                line(state, text, false)
+            }
         }
     }
 }

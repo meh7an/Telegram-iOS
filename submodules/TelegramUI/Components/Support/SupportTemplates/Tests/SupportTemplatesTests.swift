@@ -49,6 +49,13 @@ final class SupportTemplatesParserTests: XCTestCase {
         XCTAssertEqual(file.questions["q"]?.value, "{value}\ntext {VALUE}")
     }
 
+    func testValueLinesKeepTrailingSpacesOnly() {
+        let file = parse("{QUESTION}\nQ\n{KEYS}\n h \n{VALUE}\n  Hola. \r\n\tsecond line  \n   \nthird \r\n{QUESTION}\nR\n{VALUE}\nend \n")
+        XCTAssertEqual(file.questions["q"]?.value, "Hola. \nsecond line  \n\nthird ")
+        XCTAssertEqual(file.questions["q"]?.originalKeys, ["h"])
+        XCTAssertEqual(file.questions["r"]?.value, "end ")
+    }
+
     func testSecondValueIsLost() {
         let file = parse("{QUESTION}\nQ\n{VALUE}\nfirst\n{VALUE}\nsecond\n")
         XCTAssertEqual(file.questions.count, 1)
