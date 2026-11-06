@@ -111,31 +111,22 @@ func managedSupportDraftSweep(postbox: Postbox) -> Signal<Never, NoError> {
     let groupIds: [PeerGroupId] = [.root, Namespaces.PeerGroup.archive]
     let startTime = CFAbsoluteTimeGetCurrent()
 
-    func step(groupIndex: Int, position: (index: ChatListIndex, isChat: Bool)?, updatedCount: Int) -> Signal<Never, NoError> {
-        if groupIndex >= groupIds.count {
-            return postbox.transaction { transaction -> Void in
+    let sweep = supportSequentialBatches(initial: SupportChatListSweepCursor(groupIndex: 0, position: nil, count: 0), pause: draftSweepBatchPause, queue: Queue.concurrentDefaultQueue(), batch: { cursor in
+        return postbox.transaction { transaction -> SupportChatListSweepCursor? in
+            if cursor.groupIndex >= groupIds.count {
                 transaction.updatePreferencesEntry(key: PreferencesKeys.supportDraftSweep, { _ in
                     return PreferencesEntry(SupportDraftSweepState(version: 1))
                 })
-                Logger.shared.log("SupportDraftSweep", "updated \(updatedCount) stored drafts in \(Int((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0)) ms")
+                Logger.shared.log("SupportDraftSweep", "updated \(cursor.count) stored drafts in \(Int((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0)) ms")
+                return nil
             }
-            |> ignoreValues
-        }
-        return postbox.transaction { transaction in
-            return supportDraftSweepBatch(transaction: transaction, groupId: groupIds[groupIndex], position: position)
-        }
-        |> mapToSignal { result -> Signal<Never, NoError> in
-            let following: Signal<Never, NoError>
+            let result = supportDraftSweepBatch(transaction: transaction, groupId: groupIds[cursor.groupIndex], position: cursor.position)
             if let next = result.next {
-                following = step(groupIndex: groupIndex, position: next, updatedCount: updatedCount + result.updatedCount)
-            } else {
-                following = step(groupIndex: groupIndex + 1, position: nil, updatedCount: updatedCount + result.updatedCount)
+                return SupportChatListSweepCursor(groupIndex: cursor.groupIndex, position: next, count: cursor.count + result.updatedCount)
             }
-            return Signal<Never, NoError>.complete()
-            |> delay(draftSweepBatchPause, queue: Queue.concurrentDefaultQueue())
-            |> then(following)
+            return SupportChatListSweepCursor(groupIndex: cursor.groupIndex + 1, position: nil, count: cursor.count + result.updatedCount)
         }
-    }
+    })
 
     return postbox.transaction { transaction -> Bool in
         return transaction.getPreferencesEntry(key: PreferencesKeys.supportDraftSweep)?.get(SupportDraftSweepState.self) != nil
@@ -144,6 +135,6 @@ func managedSupportDraftSweep(postbox: Postbox) -> Signal<Never, NoError> {
         if isDone {
             return .complete()
         }
-        return step(groupIndex: 0, position: nil, updatedCount: 0)
+        return sweep
     }
 }

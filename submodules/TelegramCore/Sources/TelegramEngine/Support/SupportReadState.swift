@@ -172,33 +172,61 @@ private func supportDeletedUserSweepBatch(transaction: Transaction, groupId: Pee
     return (next, clearedCount)
 }
 
+struct SupportChatListSweepCursor {
+    var groupIndex: Int
+    var position: (index: ChatListIndex, isChat: Bool)?
+    var count: Int
+}
+
+// Runs batches one after another until a batch returns nil. Each batch starts from the timer, never from the previous
+// batch's completion: chaining them with `then` nested one subscription per batch, and finishing a sweep over
+// thousands of chats overflowed the thread's stack.
+func supportSequentialBatches<State>(initial: State, pause: Double, queue: Queue, batch: @escaping (State) -> Signal<State?, NoError>) -> Signal<Never, NoError> {
+    return Signal { subscriber in
+        let disposable = MetaDisposable()
+        let isDisposed = Atomic<Bool>(value: false)
+        func run(_ state: State) {
+            if isDisposed.with({ $0 }) {
+                return
+            }
+            disposable.set(batch(state).start(next: { next in
+                if let next {
+                    queue.after(pause, {
+                        run(next)
+                    })
+                } else {
+                    subscriber.putCompletion()
+                }
+            }))
+        }
+        run(initial)
+        return ActionDisposable {
+            let _ = isDisposed.swap(true)
+            disposable.dispose()
+        }
+    }
+}
+
 func managedSupportDeletedUserSweep(postbox: Postbox, accountPeerId: PeerId) -> Signal<Never, NoError> {
     let groupIds: [PeerGroupId] = [.root, Namespaces.PeerGroup.archive]
 
-    func step(groupIndex: Int, position: (index: ChatListIndex, isChat: Bool)?, clearedCount: Int) -> Signal<Never, NoError> {
-        if groupIndex >= groupIds.count {
-            Logger.shared.log("SupportReadState", "cleared \(clearedCount) deleted users' read states")
-            return .complete()
-        }
-        return postbox.transaction { transaction in
-            return supportDeletedUserSweepBatch(transaction: transaction, groupId: groupIds[groupIndex], accountPeerId: accountPeerId, position: position)
-        }
-        |> mapToSignal { result -> Signal<Never, NoError> in
-            let following: Signal<Never, NoError>
-            if let next = result.next {
-                following = step(groupIndex: groupIndex, position: next, clearedCount: clearedCount + result.clearedCount)
-            } else {
-                following = step(groupIndex: groupIndex + 1, position: nil, clearedCount: clearedCount + result.clearedCount)
+    let sweep = supportSequentialBatches(initial: SupportChatListSweepCursor(groupIndex: 0, position: nil, count: 0), pause: deletedUserSweepBatchPause, queue: Queue.concurrentDefaultQueue(), batch: { cursor in
+        return postbox.transaction { transaction -> SupportChatListSweepCursor? in
+            if cursor.groupIndex >= groupIds.count {
+                Logger.shared.log("SupportReadState", "cleared \(cursor.count) deleted users' read states")
+                return nil
             }
-            return Signal<Never, NoError>.complete()
-            |> delay(deletedUserSweepBatchPause, queue: Queue.concurrentDefaultQueue())
-            |> then(following)
+            let result = supportDeletedUserSweepBatch(transaction: transaction, groupId: groupIds[cursor.groupIndex], accountPeerId: accountPeerId, position: cursor.position)
+            if let next = result.next {
+                return SupportChatListSweepCursor(groupIndex: cursor.groupIndex, position: next, count: cursor.count + result.clearedCount)
+            }
+            return SupportChatListSweepCursor(groupIndex: cursor.groupIndex + 1, position: nil, count: cursor.count + result.clearedCount)
         }
-    }
+    })
 
     return Signal<Never, NoError>.complete()
     |> delay(deletedUserSweepStartDelay, queue: Queue.concurrentDefaultQueue())
-    |> then(step(groupIndex: 0, position: nil, clearedCount: 0))
+    |> then(sweep)
 }
 
 private let searchReadStatesPerRequest = 100

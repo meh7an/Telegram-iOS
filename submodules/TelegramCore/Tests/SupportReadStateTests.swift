@@ -1,5 +1,6 @@
 import XCTest
 import Postbox
+import SwiftSignalKit
 @testable import TelegramCore
 
 final class SupportReadStateTests: XCTestCase {
@@ -115,6 +116,37 @@ final class SupportReadStateTests: XCTestCase {
 
     func testChatKeepingNoReadStateNeverGetsADivider() {
         XCTAssertEqual(self.dividerBoundary(maxIncomingReadId: 0, maxKnownId: Int32.max - 1, top: 9), Int32.max)
+    }
+
+    func testSequentialBatchesFinishLongSweepsWithoutDeepeningTheStack() {
+        let finished = self.expectation(description: "finished")
+        let batchCount = 20000
+        let ran = Atomic<Int>(value: 0)
+        let disposable = supportSequentialBatches(initial: 0, pause: 0.0, queue: Queue(), batch: { index -> Signal<Int?, NoError> in
+            let _ = ran.modify { $0 + 1 }
+            return .single(index + 1 < batchCount ? index + 1 : nil)
+        }).start(completed: {
+            finished.fulfill()
+        })
+        self.wait(for: [finished], timeout: 60.0)
+        disposable.dispose()
+        XCTAssertEqual(ran.with { $0 }, batchCount)
+    }
+
+    func testDisposingSequentialBatchesStopsTheSweep() {
+        let queue = Queue()
+        let ran = Atomic<Int>(value: 0)
+        let disposable = supportSequentialBatches(initial: 0, pause: 0.05, queue: queue, batch: { index -> Signal<Int?, NoError> in
+            let _ = ran.modify { $0 + 1 }
+            return .single(index + 1)
+        }).start()
+        disposable.dispose()
+        let settled = self.expectation(description: "settled")
+        queue.after(0.3, {
+            settled.fulfill()
+        })
+        self.wait(for: [settled], timeout: 5.0)
+        XCTAssertEqual(ran.with { $0 }, 1)
     }
 
     func testNoCloudReadStateFallsBackToTheStockDivider() {
