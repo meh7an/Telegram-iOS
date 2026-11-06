@@ -5449,7 +5449,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             if let range {
                 richTextInputNode.selectedRange = range
             }
-            if richTextInputNode.insertTextOnUsersBehalf(text) {
+            let contentBefore = richTextInputNode.currentInputContent().content
+            if richTextInputNode.insertTextOnUsersBehalf(text), richTextInputNode.currentInputContent().content != contentBefore {
                 return
             }
         }
