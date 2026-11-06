@@ -36,6 +36,7 @@ private let supportChatListBesideOptions: [(value: SupportChatListBeside, title:
 
 private final class SupportSettingsControllerArguments {
     let updateSettings: (@escaping (SupportSettings) -> SupportSettings) -> Void
+    let selectPeriod: (Int32) -> Void
     let loadMore: (Int32) -> Void
     let importTemplates: () -> Void
     let reloadTemplates: () -> Void
@@ -43,8 +44,9 @@ private final class SupportSettingsControllerArguments {
     let removeTemplateFile: (String) -> Void
     let openShortcuts: () -> Void
 
-    init(updateSettings: @escaping (@escaping (SupportSettings) -> SupportSettings) -> Void, loadMore: @escaping (Int32) -> Void, importTemplates: @escaping () -> Void, reloadTemplates: @escaping () -> Void, setRevealedTemplateFile: @escaping (String?, String?) -> Void, removeTemplateFile: @escaping (String) -> Void, openShortcuts: @escaping () -> Void) {
+    init(updateSettings: @escaping (@escaping (SupportSettings) -> SupportSettings) -> Void, selectPeriod: @escaping (Int32) -> Void, loadMore: @escaping (Int32) -> Void, importTemplates: @escaping () -> Void, reloadTemplates: @escaping () -> Void, setRevealedTemplateFile: @escaping (String?, String?) -> Void, removeTemplateFile: @escaping (String) -> Void, openShortcuts: @escaping () -> Void) {
         self.updateSettings = updateSettings
+        self.selectPeriod = selectPeriod
         self.loadMore = loadMore
         self.importTemplates = importTemplates
         self.reloadTemplates = reloadTemplates
@@ -328,10 +330,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .period(_, period, title, isSelected):
             return ItemListCheckboxItem(presentationData: presentationData, systemStyle: .glass, title: title, style: .left, checked: isSelected, zeroSeparatorInsets: false, sectionId: self.section, action: {
-                arguments.updateSettings { settings in
-                    var settings = settings
-                    settings.chatLoadPeriod = period
-                    return settings
+                if !isSelected {
+                    arguments.selectPeriod(period)
                 }
             })
         case let .fixChatsOrderInfo(text), let .quietInfo(text), let .trailingTagsInfo(text), let .besideInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
@@ -473,8 +473,41 @@ public func supportSettingsController(context: AccountContext) -> ViewController
     let revealedTemplateFile = Atomic<String?>(value: nil)
     let revealedTemplateFilePromise = ValuePromise<String?>(nil, ignoreRepeated: true)
 
+    let setPeriod: (Int32) -> Void = { period in
+        let _ = updateSupportSettingsInteractively(engine: context.engine, { settings in
+            var settings = settings
+            settings.chatLoadPeriod = period
+            return settings
+        }).startStandalone()
+    }
+
     let arguments = SupportSettingsControllerArguments(updateSettings: { f in
         let _ = updateSupportSettingsInteractively(engine: context.engine, f).startStandalone()
+    }, selectPeriod: { period in
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let title: String
+        let text: String
+        let actionTitle: String
+        let actionType: TextAlertActionType
+        if period == SupportSettings.allChatsLoadPeriod {
+            title = "Load All Chats?"
+            text = "This loads every chat this account has ever had, with no time limit. On a support account that can be a very large number of chats: loading can take a long time, use a lot of data and make the database on this device much larger.\n\nChoose a shorter period unless you really need all of them. Switching back later removes older one-to-one chats from this device at the next launch."
+            actionTitle = "Load All"
+            actionType = .destructiveAction
+        } else if period >= 30 * 24 * 60 * 60 {
+            let unit = period >= 365 * 24 * 60 * 60 ? "year" : "month"
+            title = "Load Chats for 1 \(unit.capitalized)?"
+            text = "This loads every chat with activity in the last \(unit). On a busy support account that can be many chats: loading takes a while, uses data and makes the database on this device larger."
+            actionTitle = "Load"
+            actionType = .defaultAction
+        } else {
+            setPeriod(period)
+            return
+        }
+        presentControllerImpl?(textAlertController(context: context, title: title, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+        }), TextAlertAction(type: actionType, title: actionTitle, action: {
+            setPeriod(period)
+        })]), nil)
     }, loadMore: { holeTimestamp in
         context.supportContext?.loadMoreChats(holeTimestamp: holeTimestamp)
     }, importTemplates: {
