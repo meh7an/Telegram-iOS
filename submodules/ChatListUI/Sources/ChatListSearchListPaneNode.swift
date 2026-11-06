@@ -1261,7 +1261,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                         requiresPremiumForMessaging: requiresPremiumForMessaging,
                         displayAsTopicList: false,
                         tags: []
-                    )), editing: false, hasActiveRevealControls: false, selected: false, header: tagMask == nil ? header : nil, enabledContextActions: nil, hiddenOffset: false, interaction: interaction, hideCommunityAvatarBadge: communityId != nil)
+                    )), editing: false, hasActiveRevealControls: false, selected: false, header: tagMask == nil && enableHeaders ? header : nil, enabledContextActions: nil, hiddenOffset: false, interaction: interaction, hideCommunityAvatarBadge: communityId != nil)
                 }
             case let .messagePlaceholder(_, presentationData, searchScope):
                 var actionTitle: String?
@@ -1290,7 +1290,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                         openMessagesFilter(sourceNode)
                     })
                 }
-                return ChatListItem(presentationData: presentationData, context: context, chatListLocation: location, filterData: nil, index: EngineChatList.Item.Index.chatList(ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: PeerId(0), namespace: Namespaces.Message.Cloud, id: 0), timestamp: 0))), content: .loading, editing: false, hasActiveRevealControls: false, selected: false, header: header, enabledContextActions: nil, hiddenOffset: false, interaction: interaction)
+                return ChatListItem(presentationData: presentationData, context: context, chatListLocation: location, filterData: nil, index: EngineChatList.Item.Index.chatList(ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: PeerId(0), namespace: Namespaces.Message.Cloud, id: 0), timestamp: 0))), content: .loading, editing: false, hasActiveRevealControls: false, selected: false, header: enableHeaders ? header : nil, enabledContextActions: nil, hiddenOffset: false, interaction: interaction)
             case let .emptyMessagesFooter(presentationData, searchScope, searchQuery):
                 var actionTitle: String?
                 if communityId == nil {
@@ -1448,6 +1448,18 @@ private struct ChatListSearchListPaneNodeState: Equatable {
     var expandGlobalSearch: Bool = false
     var deletedMessageIds = Set<EngineMessage.Id>()
     var deletedGlobalMessageIds = Set<Int32>()
+    var supportHidesGlobalPeers: Bool = false
+    var supportNarrow = SupportSearchNarrowState()
+}
+
+struct SupportSearchNarrowState: Equatable {
+    var peerId: EnginePeer.Id?
+    var highlight: ChatListSupportSearchHighlight?
+}
+
+struct SupportSearchRow: Equatable {
+    var peerId: EnginePeer.Id
+    var messageId: EngineMessage.Id?
 }
 
 private func doesPeerMatchFilter(peer: EnginePeer, filter: ChatListNodePeersFilter) -> Bool {
@@ -1716,6 +1728,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     private let searchContextsValue = Atomic<[Int: ChatListSearchMessagesContext]>(value: [:])
     var searchCurrentMessages: [EngineMessage]?
     var currentEntries: [ChatListSearchEntry]?
+    private var supportChatListInteraction: ChatListNodeInteraction?
+    private var supportSelectedRow: SupportSearchRow?
 
     private var deletedMessagesDisposable: Disposable?
 
@@ -3454,7 +3468,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
 
                 var numberOfGlobalPeers = 0
                 index = 0
-                if !adsHidden {
+                if !adsHidden && !searchState.supportHidesGlobalPeers {
                     for peer in foundRemotePeers.2 {
                         if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer, EnginePeer(accountPeer)) {
                             existingPeerIds.insert(peer.peer.id)
@@ -3464,7 +3478,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     }
                 }
 
-                if let _ = tagMask {
+                if tagMask != nil || searchState.supportHidesGlobalPeers {
                 } else {
                     for peer in foundRemotePeers.1 {
                         if case .expand = globalExpandType, numberOfGlobalPeers >= 3 {
@@ -3687,6 +3701,10 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     interaction.dismissSearch()
                 }
             } else {
+                if let self, self.supportSearchApplies {
+                    self.supportSelectedRow = SupportSearchRow(peerId: peer.id, messageId: nil)
+                    self.supportApplySelection()
+                }
                 interaction.openPeer(peer, chatPeer, threadId, false)
             }
             switch location {
@@ -3702,6 +3720,10 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }, additionalCategorySelected: { _ in
         }, messageSelected: { [weak self] peer, threadId, message, _ in
             interaction.dismissInput()
+            if let self, self.supportSearchApplies {
+                self.supportSelectedRow = SupportSearchRow(peerId: peer.id, messageId: message.id)
+                self.supportApplySelection()
+            }
             if let strongSelf = self, strongSelf.supportShowsOneRowPerChat {
                 interaction.openPeer(peer, nil, threadId, false)
             } else if let strongSelf = self, let peer = message.peers[message.id.peerId] {
@@ -3804,6 +3826,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }, openUrl: { _ in
         })
         chatListInteraction.isSearchMode = true
+        self.supportChatListInteraction = chatListInteraction
 
         let listInteraction = ListMessageItemInteraction(openMessage: { [weak self] message, mode -> Bool in
             guard let strongSelf = self else {
@@ -3900,6 +3923,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         let previousSearchQuery = Atomic<String?>(value: nil)
         let previousSelectedMessages = Atomic<Set<EngineMessage.Id>?>(value: nil)
         let previousExpandGlobalSearch = Atomic<Bool>(value: false)
+        let previousSupportNarrow = Atomic<SupportSearchNarrowState>(value: SupportSearchNarrowState())
         let previousAdsHidden = Atomic<Bool>(value: false)
 
         self.searchQueryDisposable = (searchQuery
@@ -4039,6 +4063,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             if let strongSelf = self {
                 let previousSelectedMessageIds = previousSelectedMessages.swap(strongSelf.selectedMessages)
                 let previousExpandGlobalSearch = previousExpandGlobalSearch.swap(strongSelf.searchStateValue.expandGlobalSearch)
+                let supportNarrowChanged = previousSupportNarrow.swap(strongSelf.searchStateValue.supportNarrow) != strongSelf.searchStateValue.supportNarrow
                 let previousAdsHidden = previousAdsHidden.swap(strongSelf.adsHidden)
 
                 var entriesAndFlags = foundItems?.0
@@ -4089,7 +4114,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
 
                 let animated = selectionChanged || expandGlobalSearchChanged || adsHiddenChanged
                 let firstTime = previousEntries == nil || previousQuery != currentQuery
-                var transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: newEntries, displayingResults: entriesAndFlags != nil, isEmpty: !isSearching && (entriesAndFlags?.isEmpty ?? false), isLoading: isSearching, animated: animated, context: context, presentationData: strongSelf.presentationData, enableHeaders: true, filter: peersFilter, requestPeerType: requestPeerType, location: location, communityId: strongSelf.communityId, key: strongSelf.key, tagMask: tagMask, interaction: chatListInteraction, listInteraction: listInteraction, peerContextAction: { message, node, rect, gesture, location in
+                let supportPrepareTransition: ([ChatListSearchEntry]) -> ChatListSearchContainerTransition = { fromEntries in
+                return chatListSearchContainerPreparedTransition(from: fromEntries, to: newEntries, displayingResults: entriesAndFlags != nil, isEmpty: !isSearching && (entriesAndFlags?.isEmpty ?? false), isLoading: isSearching, animated: animated, context: context, presentationData: strongSelf.presentationData, enableHeaders: strongSelf.searchStateValue.supportNarrow.peerId == nil, filter: peersFilter, requestPeerType: requestPeerType, location: location, communityId: strongSelf.communityId, key: strongSelf.key, tagMask: tagMask, interaction: chatListInteraction, listInteraction: listInteraction, peerContextAction: { message, node, rect, gesture, location in
                     interaction.peerContextAction?(message, node, rect, gesture, location)
                 }, toggleExpandLocalResults: {
                     guard let strongSelf = self else {
@@ -4195,6 +4221,12 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     }
                     strongSelf.searchScopePromise.set(.everywhere)
                 })
+                }
+                var transition = supportPrepareTransition(previousEntries ?? [])
+                if supportNarrowChanged {
+                    transition = supportRebuildingAllRows(transition, rebuilt: supportPrepareTransition([]), previousEntries: previousEntries ?? [], newEntries: newEntries)
+                    transition.animated = !firstTime
+                }
                 strongSelf.currentEntries = newEntries
                 if strongSelf.key == .downloads {
                     if !firstTime, !"".isEmpty {
@@ -5017,6 +5049,131 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.emptyResultsAnimationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.animationTapGesture(_:))))
 
         self.updateSelectedMessages(animated: false)
+    }
+
+    var supportPresentation = ChatListSearchSupportPresentation() {
+        didSet {
+            guard self.supportPresentation != oldValue, let interaction = self.supportChatListInteraction else {
+                return
+            }
+            interaction.inlineNavigationLocation = self.supportPresentation.narrowPeerId.flatMap { ChatListHighlightedLocation(location: .peer(id: $0), progress: 1.0) }
+            interaction.highlightedChatLocation = self.supportPresentation.selectedPeerId.flatMap { ChatListHighlightedLocation(location: .peer(id: $0), progress: 1.0) }
+            let followedPeerId = self.supportPresentation.narrowPeerId ?? self.supportPresentation.selectedPeerId
+            if followedPeerId == nil {
+                self.supportSelectedRow = nil
+            } else if self.supportSelectedRow?.peerId != followedPeerId {
+                self.supportSelectedRow = self.supportSearchRows().first(where: { $0.row.peerId == followedPeerId })?.row
+            }
+            self.supportApplySelection(forceHighlightUpdate: self.supportPresentation.selectedPeerId != oldValue.selectedPeerId)
+        }
+    }
+
+    private func supportApplySelection(forceHighlightUpdate: Bool = false) {
+        guard let interaction = self.supportChatListInteraction else {
+            return
+        }
+        let previousHighlight = interaction.supportSearchHighlight
+        if let row = self.supportSelectedRow, !self.supportShowsOneRowPerChat {
+            interaction.supportSearchHighlight = row.messageId.flatMap { .message($0) } ?? ChatListSupportSearchHighlight.none
+        } else {
+            interaction.supportSearchHighlight = nil
+        }
+        if forceHighlightUpdate || previousHighlight != interaction.supportSearchHighlight {
+            self.listNode?.forEachItemNode { itemNode in
+                (itemNode as? ChatListItemNode)?.updateIsHighlighted(transition: .immediate)
+            }
+        }
+        let presentation = self.supportPresentation
+        let narrowHighlight = presentation.narrowPeerId != nil ? interaction.supportSearchHighlight : nil
+        self.updateState { state in
+            var state = state
+            state.supportHidesGlobalPeers = presentation.hidesGlobalPeers
+            state.supportNarrow = SupportSearchNarrowState(peerId: presentation.narrowPeerId, highlight: narrowHighlight)
+            return state
+        }
+    }
+
+    private func supportSearchRows() -> [(row: SupportSearchRow, index: Int)] {
+        guard let entries = self.currentEntries else {
+            return []
+        }
+        var result: [(row: SupportSearchRow, index: Int)] = []
+        var shownPeerIds = Set<EnginePeer.Id>()
+        for (index, entry) in entries.enumerated() {
+            guard let (row, peer) = supportSearchEntryRow(entry), !supportSearchPeerIsForum(peer) else {
+                continue
+            }
+            if self.supportShowsOneRowPerChat, !shownPeerIds.insert(row.peerId).inserted {
+                continue
+            }
+            result.append((row, index))
+        }
+        return result
+    }
+
+    func supportWalkResults(downward: Bool) -> Bool {
+        guard self.supportSearchApplies, let entries = self.currentEntries else {
+            return false
+        }
+        let rows = self.supportSearchRows()
+        var position: Int?
+        if let selectedRow = self.supportSelectedRow {
+            position = rows.firstIndex(where: { $0.row == selectedRow }) ?? rows.firstIndex(where: { $0.row.peerId == selectedRow.peerId })
+        }
+        let target: Int
+        if let position {
+            target = downward ? position + 1 : position - 1
+        } else {
+            target = downward ? 0 : rows.count - 1
+        }
+        guard target >= 0, target < rows.count else {
+            return true
+        }
+        let (row, index) = rows[target]
+        self.supportSelectedRow = row
+        self.supportApplySelection()
+        self.supportScrollToEntry(index: index)
+        switch entries[index] {
+        case let .localPeer(peer, associatedPeer, _, _, _, _, _, _, _, _, _, _):
+            self.interaction.openPeer(peer, associatedPeer ?? peer, nil, false)
+        case let .message(message, peer, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+            if self.supportShowsOneRowPerChat {
+                if let peer = peer.peer {
+                    self.interaction.openPeer(peer, nil, nil, false)
+                }
+            } else if let messagePeer = message.peers[message.id.peerId] {
+                self.interaction.openMessage(EnginePeer(messagePeer), nil, message.id, self.key == .chats)
+            }
+        default:
+            break
+        }
+        return true
+    }
+
+    func supportScrollToChat(peerId: EnginePeer.Id) {
+        let rows = self.supportSearchRows()
+        if let selectedRow = self.supportSelectedRow, selectedRow.peerId == peerId, let row = rows.first(where: { $0.row == selectedRow }) {
+            self.supportScrollToEntry(index: row.index)
+        } else if let row = rows.first(where: { $0.row.peerId == peerId }) {
+            self.supportScrollToEntry(index: row.index)
+        }
+    }
+
+    private func supportScrollToEntry(index: Int) {
+        guard let listNode = self.listNode else {
+            return
+        }
+        var rowNode: ListViewItemNode?
+        listNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ListViewItemNode, itemNode.index == index {
+                rowNode = itemNode
+            }
+        }
+        if let rowNode {
+            listNode.ensureItemNodeVisible(rowNode, animated: true, overflow: 16.0)
+            return
+        }
+        listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: index, position: .visible, animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
     }
 
     private func updateState(_ f: (ChatListSearchListPaneNodeState) -> ChatListSearchListPaneNodeState) {
@@ -6457,6 +6614,48 @@ public final class ChatListSearchShimmerNode: ASDisplayNode {
         transition.updateFrame(node: self.maskNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
         transition.updateFrame(node: self.effectNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
     }
+}
+
+private func supportSearchEntryRow(_ entry: ChatListSearchEntry) -> (SupportSearchRow, EnginePeer?)? {
+    switch entry {
+    case let .localPeer(peer, _, _, _, _, _, _, _, _, _, _, _):
+        return (SupportSearchRow(peerId: peer.id, messageId: nil), peer)
+    case let .message(message, peer, _, _, _, _, _, _, _, _, section, _, _, _, _, _):
+        if case .generic = section {
+            return (SupportSearchRow(peerId: peer.peerId, messageId: message.id), peer.peer)
+        }
+        return nil
+    default:
+        return nil
+    }
+}
+
+private func supportSearchPeerIsForum(_ peer: EnginePeer?) -> Bool {
+    switch peer {
+    case let .channel(channel):
+        return channel.flags.contains(.isForum) || channel.flags.contains(.isMonoforum)
+    case let .user(user):
+        return user.botInfo?.flags.contains(.hasForum) ?? false
+    default:
+        return false
+    }
+}
+
+// Rows the narrow column draws differently must all be rebuilt, also those whose entry did not change.
+private func supportRebuildingAllRows(_ transition: ChatListSearchContainerTransition, rebuilt: ChatListSearchContainerTransition, previousEntries: [ChatListSearchEntry], newEntries: [ChatListSearchEntry]) -> ChatListSearchContainerTransition {
+    var previousIndices: [ChatListSearchEntryStableId: Int] = [:]
+    for (index, entry) in previousEntries.enumerated() {
+        previousIndices[entry.stableId] = index
+    }
+    let handledIndices = Set(transition.insertions.map(\.index) + transition.updates.map(\.index))
+    var updates = transition.updates
+    for insertion in rebuilt.insertions where !handledIndices.contains(insertion.index) && insertion.index < newEntries.count {
+        if let previousIndex = previousIndices[newEntries[insertion.index].stableId] {
+            updates.append(ListViewUpdateItem(index: insertion.index, previousIndex: previousIndex, item: insertion.item, directionHint: nil))
+        }
+    }
+    updates.sort(by: { $0.index < $1.index })
+    return ChatListSearchContainerTransition(deletions: transition.deletions, insertions: transition.insertions, updates: updates, displayingResults: transition.displayingResults, isEmpty: transition.isEmpty, isLoading: transition.isLoading, query: transition.query, approvedGlobalPostQueryState: transition.approvedGlobalPostQueryState, globalSearchStateValue: transition.globalSearchStateValue, animated: transition.animated)
 }
 
 private func supportSearchWalkPeerIds(_ entries: [ChatListSearchEntry]) -> [EnginePeer.Id] {

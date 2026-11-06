@@ -3,6 +3,12 @@ import SwiftSignalKit
 import TelegramCore
 import AccountContext
 
+struct ChatListSearchSupportPresentation: Equatable {
+    var hidesGlobalPeers: Bool = false
+    var narrowPeerId: EnginePeer.Id?
+    var selectedPeerId: EnginePeer.Id?
+}
+
 func supportSearchAppliesToPane(hasSupportContext: Bool, key: ChatListSearchPaneKey, location: ChatListControllerLocation) -> Bool {
     guard hasSupportContext, key == .chats, case .chatList = location else {
         return false

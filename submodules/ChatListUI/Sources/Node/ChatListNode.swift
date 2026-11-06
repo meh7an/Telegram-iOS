@@ -51,6 +51,11 @@ struct ChatListNodeListViewTransition {
     let animateCrossfade: Bool
 }
 
+enum ChatListSupportSearchHighlight: Equatable {
+    case message(EngineMessage.Id)
+    case none
+}
+
 final class ChatListHighlightedLocation: Equatable {
     let location: ChatLocation
     let progress: CGFloat
@@ -131,6 +136,7 @@ public final class ChatListNodeInteraction {
     
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
+    var supportSearchHighlight: ChatListSupportSearchHighlight?
     
     var isSearchMode: Bool = false
     
