@@ -59,6 +59,46 @@ final class SupportInstallationTagTests: XCTestCase {
         XCTAssertNotEqual(first & 0xffffffff, 0)
     }
 
+    private func legacyKey(_ value: Int32) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: value)
+        return key
+    }
+
+    func testLegacyEntriesMoveToTheNewKeysOnce() throws {
+        var settings = SupportSettings.default
+        settings.swipeToNextChat = true
+        let moved = try value(postbox.transaction { transaction -> (SupportSettings?, Int64?, Bool, Bool) in
+            transaction.setPreferencesEntry(key: self.legacyKey(52), value: PreferencesEntry(settings))
+            transaction.setPreferencesEntry(key: self.legacyKey(53), value: PreferencesEntry(SupportInstallationTag(value: 12345)))
+            supportMoveLegacyPreferences(transaction: transaction)
+            return (
+                transaction.getPreferencesEntry(key: PreferencesKeys.supportSettings)?.get(SupportSettings.self),
+                transaction.getPreferencesEntry(key: PreferencesKeys.supportInstallationTag)?.get(SupportInstallationTag.self)?.value,
+                transaction.getPreferencesEntry(key: self.legacyKey(52)) == nil,
+                transaction.getPreferencesEntry(key: self.legacyKey(53)) == nil
+            )
+        })
+        XCTAssertEqual(moved.0?.swipeToNextChat, true)
+        XCTAssertEqual(moved.1, 12345)
+        XCTAssertTrue(moved.2)
+        XCTAssertTrue(moved.3)
+    }
+
+    func testAnEntryAtTheOldKeyIsLeftAloneOnceTheSettingsAreMoved() throws {
+        let kept = try value(postbox.transaction { transaction -> Bool in
+            supportMoveLegacyPreferences(transaction: transaction)
+            transaction.setPreferencesEntry(key: self.legacyKey(52), value: PreferencesEntry(SupportInstallationTag(value: 1)))
+            supportMoveLegacyPreferences(transaction: transaction)
+            return transaction.getPreferencesEntry(key: self.legacyKey(52)) != nil
+        })
+        XCTAssertTrue(kept)
+        let settings = try value(postbox.transaction { transaction -> SupportSettings? in
+            return transaction.getPreferencesEntry(key: PreferencesKeys.supportSettings)?.get(SupportSettings.self)
+        })
+        XCTAssertEqual(settings, SupportSettings.default)
+    }
+
     func testFirstTagIsStored() throws {
         let tag = try value(postbox.transaction { transaction -> UInt64 in
             return supportInstallationTag(transaction: transaction)

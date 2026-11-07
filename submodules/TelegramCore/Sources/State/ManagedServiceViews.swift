@@ -2,15 +2,18 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-func managedServiceViews(accountPeerId: PeerId, network: Network, postbox: Postbox, stateManager: AccountStateManager, pendingMessageManager: PendingMessageManager, supportContext: SupportContext?, supplementary: Bool) -> (resetPeerHoles: (PeerId) -> Void, disposable: Disposable) {
+func managedServiceViews(accountPeerId: PeerId, network: Network, postbox: Postbox, stateManager: AccountStateManager, pendingMessageManager: PendingMessageManager, pendingReferences: PendingMessageReferences, supportContext: SupportContext?, supplementary: Bool) -> (resetPeerHoles: (PeerId) -> Void, disposable: Disposable) {
     let disposable = DisposableSet()
     
-    let managedHoles = managedMessageHistoryHoles(accountPeerId: accountPeerId, network: network, postbox: postbox)
+    let managedHoles = managedMessageHistoryHoles(accountPeerId: accountPeerId, network: network, postbox: postbox, pendingReferences: pendingReferences)
     
     disposable.add(managedHoles.1)
     disposable.add(managedChatListHoles(network: network, postbox: postbox, accountPeerId: accountPeerId, supportContext: supportContext).start())
     disposable.add(managedForumTopicListHoles(network: network, postbox: postbox, accountPeerId: accountPeerId).start())
     if let supportContext, !supplementary {
+        disposable.add(postbox.transaction { transaction -> Void in
+            supportMoveLegacyPreferences(transaction: transaction)
+        }.start())
         disposable.add(_internal_supportName(network: network, postbox: postbox).start(next: { name in
             supportContext.setSupportName(name)
         }))

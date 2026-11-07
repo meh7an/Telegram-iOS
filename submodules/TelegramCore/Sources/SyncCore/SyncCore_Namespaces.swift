@@ -171,6 +171,7 @@ public struct Namespaces {
         public static let feed: Int8 = 60
         public static let shareThemeBackdrops: Int8 = 61
         public static let cachedUniqueStarGifts: Int8 = 62
+        public static let cachedAgent: Int8 = 63
     }
     
     public struct UnorderedItemList {
@@ -353,9 +354,10 @@ private enum PreferencesKeyValues: Int32 {
     case webBrowserSettings = 49
     case communitiesState = 50
     case unreadCounterTagsState = 51
-    case supportSettings = 52
-    case supportInstallationTag = 53
-    case supportDraftSweep = 54
+    case stateSyncDebugSettings = 52
+    case supportSettings = 1000
+    case supportInstallationTag = 1001
+    case supportDraftSweep = 1002
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -660,6 +662,13 @@ public struct PreferencesKeys {
         key.setInt32(0, value: PreferencesKeyValues.emojiGameInfo.rawValue)
         return key
     }
+    
+    /// `StateSyncDebugSettings`: Debug Settings for state sync, honoured only in DEBUG builds.
+    public static let stateSyncDebugSettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.stateSyncDebugSettings.rawValue)
+        return key
+    }()
 }
 
 private enum SharedDataKeyValues: Int32 {

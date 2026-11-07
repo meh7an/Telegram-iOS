@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -54,11 +53,11 @@ public final class ChatMessageTrailingTagsBubbleContentNode: ChatMessageBubbleCo
         }
     }
 
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.separatorNode = ASDisplayNode()
         self.statusNode = ChatMessageDateAndStatusNode()
 
-        super.init(lottieSettings: lottieSettings)
+        super.init()
 
         self.separatorNode.isLayerBacked = true
         self.addSubnode(self.separatorNode)

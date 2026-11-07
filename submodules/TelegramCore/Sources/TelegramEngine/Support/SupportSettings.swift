@@ -109,6 +109,31 @@ func supportSettingsSignal(postbox: Postbox) -> Signal<SupportSettings, NoError>
     }
 }
 
+func supportMoveLegacyPreferences(transaction: Transaction) {
+    guard transaction.getPreferencesEntry(key: PreferencesKeys.supportSettings) == nil else {
+        return
+    }
+    let moves: [(legacy: Int32, key: ValueBoxKey)] = [
+        (52, PreferencesKeys.supportSettings),
+        (53, PreferencesKeys.supportInstallationTag),
+        (54, PreferencesKeys.supportDraftSweep)
+    ]
+    for move in moves {
+        let legacyKey = ValueBoxKey(length: 4)
+        legacyKey.setInt32(0, value: move.legacy)
+        guard let entry = transaction.getPreferencesEntry(key: legacyKey) else {
+            continue
+        }
+        if transaction.getPreferencesEntry(key: move.key) == nil {
+            transaction.setPreferencesEntry(key: move.key, value: entry)
+        }
+        transaction.setPreferencesEntry(key: legacyKey, value: nil)
+    }
+    if transaction.getPreferencesEntry(key: PreferencesKeys.supportSettings) == nil {
+        transaction.setPreferencesEntry(key: PreferencesKeys.supportSettings, value: PreferencesEntry(SupportSettings.default))
+    }
+}
+
 func supportSettings(transaction: Transaction) -> SupportSettings {
     return transaction.getPreferencesEntry(key: PreferencesKeys.supportSettings)?.get(SupportSettings.self) ?? .default
 }
