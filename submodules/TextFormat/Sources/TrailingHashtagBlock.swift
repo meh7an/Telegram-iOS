@@ -6,7 +6,7 @@ public struct TrailingHashtagFooter: Equatable {
     public let hashtags: [String]
 }
 
-public func trailingHashtagFooter(text: String, entities: [MessageTextEntity]) -> TrailingHashtagFooter? {
+public func trailingHashtagFooter(text: String, entities: [MessageTextEntity], isCaption: Bool = false) -> TrailingHashtagFooter? {
     guard let range = trailingHashtagBlockRange(text: text, entities: entities) else {
         return nil
     }
@@ -15,7 +15,7 @@ public func trailingHashtagFooter(text: String, entities: [MessageTextEntity]) -
     while textEnd > 0, CharacterSet.whitespacesAndNewlines.contains(UnicodeScalar(string.character(at: textEnd - 1)) ?? "a") {
         textEnd -= 1
     }
-    if textEnd == 0 {
+    if textEnd == 0 && !isCaption {
         return nil
     }
     let hashtags = entities.compactMap { entity -> String? in

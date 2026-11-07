@@ -452,8 +452,13 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
     
     if item.context.supportContext?.currentTrailingTags == true, !item.associatedData.isSuspiciousPeer, item.controllerInteraction.searchTextHighightState == nil, let textIndex = result.lastIndex(where: { $0.1 == ChatMessageTextBubbleContentNode.self }) {
         let textEntry = result[textIndex]
-        if textEntry.0.effectivelyIncoming(item.context.account.peerId), trailingHashtagFooter(text: textEntry.0.text, entities: textEntry.0.textEntitiesAttribute?.entities ?? []) != nil {
-            result.insert((textEntry.0, ChatMessageTrailingTagsBubbleContentNode.self, textEntry.2, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)), at: textIndex + 1)
+        if textEntry.0.effectivelyIncoming(item.context.account.peerId), let footer = trailingHashtagFooter(text: textEntry.0.text, entities: textEntry.0.textEntitiesAttribute?.entities ?? [], isCaption: !textEntry.0.media.isEmpty) {
+            let tagsEntry: (Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes) = (textEntry.0, ChatMessageTrailingTagsBubbleContentNode.self, textEntry.2, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default))
+            if footer.textEnd == 0 {
+                result[textIndex] = tagsEntry
+            } else {
+                result.insert(tagsEntry, at: textIndex + 1)
+            }
         }
     }
     

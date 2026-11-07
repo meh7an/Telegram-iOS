@@ -130,7 +130,7 @@ public final class ChatMessageTrailingTagsBubbleContentNode: ChatMessageBubbleCo
                 let incoming = message.effectivelyIncoming(item.context.account.peerId)
                 let messageTheme = incoming ? item.presentationData.theme.theme.chat.message.incoming : item.presentationData.theme.theme.chat.message.outgoing
                 let entities = message.textEntitiesAttribute?.entities ?? []
-                let footer = trailingHashtagFooter(text: message.text, entities: entities)
+                let footer = trailingHashtagFooter(text: message.text, entities: entities, isCaption: !message.media.isEmpty)
                 let hashtags = footer?.hashtags ?? []
                 var selectionText = ""
                 var selectionRanges: [NSRange] = []

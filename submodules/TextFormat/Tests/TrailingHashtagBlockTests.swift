@@ -76,6 +76,16 @@ final class TrailingHashtagBlockTests: XCTestCase {
         XCTAssertNil(trailingHashtagFooter(text: text, entities: self.hashtags(in: text)))
     }
 
+    func testACaptionOfOnlyHashtagsIsAllFooter() {
+        let text = "#one #two #three"
+        XCTAssertEqual(trailingHashtagFooter(text: text, entities: self.hashtags(in: text), isCaption: true), TrailingHashtagFooter(textEnd: 0, hashtags: ["#one", "#two", "#three"]))
+    }
+
+    func testACaptionWithTextKeepsItsTextEnd() {
+        let text = "Hello there\n#one #two #three"
+        XCTAssertEqual(trailingHashtagFooter(text: text, entities: self.hashtags(in: text), isCaption: true)?.textEnd, 11)
+    }
+
     func testOffsetsCountEmojiAsUTF16() {
         let text = "\u{1F600}\u{1F600}\n#one #two #three"
         let range = trailingHashtagBlockRange(text: text, entities: self.hashtags(in: text))

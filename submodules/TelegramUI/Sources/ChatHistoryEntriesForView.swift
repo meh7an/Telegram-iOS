@@ -378,7 +378,7 @@ func chatHistoryEntriesForView(
     
     if context.supportContext?.currentTrailingTags == true {
         let hasTrailingTags: (Message) -> Bool = { message in
-            return message.effectivelyIncoming(context.account.peerId) && trailingHashtagFooter(text: message.text, entities: message.textEntitiesAttribute?.entities ?? []) != nil
+            return message.effectivelyIncoming(context.account.peerId) && trailingHashtagFooter(text: message.text, entities: message.textEntitiesAttribute?.entities ?? [], isCaption: !message.media.isEmpty) != nil
         }
         latest: for i in (0 ..< entries.count).reversed() {
             switch entries[i] {
