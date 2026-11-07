@@ -59,6 +59,7 @@ private final class SupportSettingsControllerArguments {
 private enum SupportSettingsSection: Int32 {
     case switching
     case sending
+    case swipe
     case order
     case quiet
     case tags
@@ -76,6 +77,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         case sendSilently
         case hideKeyboardOnSwitch
         case hideKeyboardOnSwitchInfo
+        case swipeToNextChat
+        case swipeToNextChatInfo
         case fixChatsOrder
         case fixChatsOrderInfo
         case automaticMediaDownload
@@ -106,6 +109,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
     case sendSilently(String, Bool)
     case hideKeyboardOnSwitch(String, Bool)
     case hideKeyboardOnSwitchInfo(String)
+    case swipeToNextChat(String, Bool)
+    case swipeToNextChatInfo(String)
     case fixChatsOrder(String, Bool)
     case fixChatsOrderInfo(String)
     case automaticMediaDownload(String, Bool)
@@ -136,6 +141,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return SupportSettingsSection.switching.rawValue
         case .sendSilently, .hideKeyboardOnSwitch, .hideKeyboardOnSwitchInfo:
             return SupportSettingsSection.sending.rawValue
+        case .swipeToNextChat, .swipeToNextChatInfo:
+            return SupportSettingsSection.swipe.rawValue
         case .fixChatsOrder, .fixChatsOrderInfo:
             return SupportSettingsSection.order.rawValue
         case .automaticMediaDownload, .hideProfilePhotos, .inAppNotifications, .quietInfo:
@@ -167,6 +174,10 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return .hideKeyboardOnSwitch
         case .hideKeyboardOnSwitchInfo:
             return .hideKeyboardOnSwitchInfo
+        case .swipeToNextChat:
+            return .swipeToNextChat
+        case .swipeToNextChatInfo:
+            return .swipeToNextChatInfo
         case .fixChatsOrder:
             return .fixChatsOrder
         case .fixChatsOrderInfo:
@@ -228,32 +239,36 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return 5
         case .hideKeyboardOnSwitchInfo:
             return 6
-        case .fixChatsOrder:
+        case .swipeToNextChat:
             return 7
-        case .fixChatsOrderInfo:
+        case .swipeToNextChatInfo:
             return 8
-        case .automaticMediaDownload:
+        case .fixChatsOrder:
             return 9
-        case .hideProfilePhotos:
+        case .fixChatsOrderInfo:
             return 10
-        case .inAppNotifications:
+        case .automaticMediaDownload:
             return 11
-        case .quietInfo:
+        case .hideProfilePhotos:
             return 12
-        case .trailingTags:
+        case .inAppNotifications:
             return 13
-        case .trailingTagsInfo:
+        case .quietInfo:
             return 14
-        case .besideHeader:
+        case .trailingTags:
             return 15
+        case .trailingTagsInfo:
+            return 16
+        case .besideHeader:
+            return 17
         case let .beside(index, _, _, _):
-            return 16 + index
+            return 18 + index
         case .besideInfo:
-            return 19
+            return 21
         case .periodHeader:
-            return 20
+            return 22
         case let .period(index, _, _, _):
-            return 21 + index
+            return 23 + index
         case .periodInfo:
             return 100
         case .loadMore:
@@ -307,6 +322,14 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                 arguments.updateSettings { settings in
                     var settings = settings
                     settings.hideKeyboardOnSwitch = value
+                    return settings
+                }
+            })
+        case let .swipeToNextChat(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateSettings { settings in
+                    var settings = settings
+                    settings.swipeToNextChat = value
                     return settings
                 }
             })
@@ -368,7 +391,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     arguments.selectPeriod(period)
                 }
             })
-        case let .hideKeyboardOnSwitchInfo(text), let .fixChatsOrderInfo(text), let .quietInfo(text), let .trailingTagsInfo(text), let .besideInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
+        case let .hideKeyboardOnSwitchInfo(text), let .swipeToNextChatInfo(text), let .fixChatsOrderInfo(text), let .quietInfo(text), let .trailingTagsInfo(text), let .besideInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .shortcuts(title):
             return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: title, label: "", sectionId: self.section, style: .blocks, action: {
@@ -435,7 +458,10 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
 
     entries.append(.sendSilently("Send all messages without sound", settings.sendAllSilently))
     entries.append(.hideKeyboardOnSwitch("Hide keyboard when switching chats", settings.hideKeyboardOnSwitch))
-    entries.append(.hideKeyboardOnSwitchInfo("Moving to another chat after sending, with Done or with the keyboard shortcuts closes the keyboard, leaving more room to read. With a hardware keyboard, typing stays in the composer."))
+    entries.append(.hideKeyboardOnSwitchInfo("Moving to another chat after sending, with Done, with a swipe or with the keyboard shortcuts closes the keyboard, leaving more room to read. With a hardware keyboard, typing stays in the composer."))
+
+    entries.append(.swipeToNextChat("Swipe up for the next unread chat", settings.swipeToNextChat))
+    entries.append(.swipeToNextChatInfo("Swiping up at the bottom of a chat opens the next unread chat, as channels do. It goes the way sending would, and the chat you leave is not marked as read."))
 
     entries.append(.fixChatsOrder("Fix chats order", settings.fixChatsOrder))
     entries.append(.fixChatsOrderInfo("Chats keep their place while messages arrive. Pinning a chat or restarting the app re-sorts the list."))

@@ -5709,7 +5709,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             return false
         }
         if let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
-            if inputPanelNode.isFocused {
+            // Support chats keep the composer focused for a hardware keyboard; an on-screen one is caught above.
+            if inputPanelNode.isFocused && self.context.supportContext == nil {
                 return false
             }
             if !inputPanelNode.text.isEmpty {

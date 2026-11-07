@@ -294,6 +294,7 @@ extension ChatControllerImpl {
             )
         }
         self.chatDisplayNode.historyNode.nextChannelToReadDisplayName = contentData.state.nextChannelToReadDisplayName
+        self.chatDisplayNode.historyNode.nextChannelToReadEmptyTitle = contentData.state.supportSwipeToNextChat ? "You have no unread chats" : nil
         self.updateNextChannelToReadVisibility()
         
         var animated = false
@@ -5547,6 +5548,9 @@ extension ChatControllerImpl {
         historyNode.openNextChannelToRead = { [weak self] peer, threadData, location -> Bool in
             guard let strongSelf = self else {
                 return false
+            }
+            if strongSelf.contentData?.state.supportSwipeToNextChat == true {
+                return strongSelf.supportSwitch(to: peer)
             }
             if let navigationController = strongSelf.effectiveNavigationController {
                 let _ = ApplicationSpecificNotice.incrementNextChatSuggestionTip(accountManager: strongSelf.context.sharedContext.accountManager).startStandalone()
